@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: aatmanirbhar_nari_mongodb
+    environment:
+      MONGO_INITDB_DATABASE: aatmanirbhar_nari
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: secure_password_123
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    networks:
+      - aatmanirbhar_network
+
+  # Backend Server
+  backend:
+    build: ./server
+    container_name: aatmanirbhar_nari_backend
+    environment:
+      PORT: 5000
+      MONGO_URI: mongodb://admin:secure_password_123@mongodb:27017/aatmanirbhar_nari?authSource=admin
+      JWT_SECRET: your_super_secret_key_change_me_in_production
+      NODE_ENV: production
+      CLIENT_URL: http://localhost:3000
+    ports:
+      - "5000:5000"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - aatmanirbhar_network
+    restart: unless-stopped
+
+  # Frontend Client
+  client:
+    build: ./client
+    container_name: aatmanirbhar_nari_client
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - aatmanirbhar_network
+    restart: unless-stopped
+
+  # Optional: Mongo Express (MongoDB Admin UI)
+  mongo-express:
+    image: mongo-express:latest
+    container_name: aatmanirbhar_nari_mongo_express
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: admin
+      ME_CONFIG_MONGODB_ADMINPASSWORD: secure_password_123
+      ME_CONFIG_MONGODB_URL: mongodb://admin:secure_password_123@mongodb:27017/
+      ME_CONFIG_BASICAUTH_USERNAME: admin
+      ME_CONFIG_BASICAUTH_PASSWORD: admin123
+    ports:
+      - "8081:8081"
+    depends_on:
+      - mongodb
+    networks:
+      - aatmanirbhar_network
+
+volumes:
+  mongodb_data:
+    driver: local
+  mongodb_config:
+    driver: local
+
+networks:
+  aatmanirbhar_network:
+    driver: bridge
