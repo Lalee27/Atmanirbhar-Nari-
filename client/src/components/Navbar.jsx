@@ -1,5 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
+import { useSocket } from '../context/SocketContext';
+import { getNotifications, markAllNotificationsRead } from '../services/api';
 
 export default function Navbar() {
   const location = useLocation();
@@ -8,9 +10,11 @@ export default function Navbar() {
   const [userInfo, setUserInfo] = useState(null);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [notifications, setNotifications] = useState([]);
 
   const notifRef = useRef(null);
   const userRef = useRef(null);
+  const socket = useSocket();
 
   // Sync user info on mount / location change
   useEffect(() => {
@@ -25,6 +29,42 @@ export default function Navbar() {
       setUserInfo(null);
     }
   }, [location]);
+
+  // Fetch notifications
+  useEffect(() => {
+    if (userInfo && userInfo.token) {
+      getNotifications().then((res) => {
+        setNotifications(res.data);
+      }).catch(err => console.error(err));
+    } else {
+      setNotifications([]);
+    }
+  }, [userInfo]);
+
+  // Listen for socket events
+  useEffect(() => {
+    if (socket) {
+      socket.on('new_notification', (notif) => {
+        setNotifications((prev) => [notif, ...prev]);
+        // Optional: show a toast or play a sound here
+      });
+
+      return () => {
+        socket.off('new_notification');
+      };
+    }
+  }, [socket]);
+
+  const handleMarkAllRead = async () => {
+    try {
+      await markAllNotificationsRead();
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+    } catch (err) {
+      console.error('Failed to mark all as read', err);
+    }
+  };
+
+  const unreadCount = notifications.filter(n => !n.isRead).length;
 
   // Click outside to close dropdowns
   useEffect(() => {
@@ -96,37 +136,58 @@ export default function Navbar() {
 
       <div className="flex items-center gap-4">
         {/* Notifications Bell */}
-        <div className="relative" ref={notifRef}>
-          <button
-            onClick={() => setShowNotifications(!showNotifications)}
-            className="p-2 active:scale-95 transition-transform hover:bg-surface-container-low rounded-full relative cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors">notifications</span>
-            <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-error rounded-full ring-2 ring-surface animate-pulse" />
-          </button>
+        {userInfo && (
+          <div className="relative" ref={notifRef}>
+            <button
+              onClick={() => setShowNotifications(!showNotifications)}
+              className="p-2 active:scale-95 transition-transform hover:bg-surface-container-low rounded-full relative cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors">notifications</span>
+              {unreadCount > 0 && (
+                <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-error rounded-full ring-2 ring-surface animate-pulse" />
+              )}
+            </button>
 
-          {showNotifications && (
-            <div className="absolute right-0 mt-2 w-80 bg-surface border border-outline-variant rounded-2xl shadow-xl z-50 p-4 animate-fade-in-up">
-              <div className="flex justify-between items-center mb-3">
-                <h4 className="text-title-sm font-bold text-on-surface">Notifications</h4>
-                <span className="text-label-sm text-primary font-semibold cursor-pointer hover:underline">Mark all read</span>
-              </div>
-              <hr className="border-outline-variant mb-3" />
-              <div className="flex flex-col gap-3 max-h-60 overflow-y-auto">
-                <div className="flex gap-3 p-2 rounded-xl hover:bg-surface-container-low transition-colors">
-                  <div className="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center text-primary flex-shrink-0">
-                    <span className="material-symbols-outlined text-body-medium">celebration</span>
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-body-md text-on-surface font-semibold">Welcome to Aatmanirbhar Nari! 🌟</p>
-                    <p className="text-label-md text-on-surface-variant leading-relaxed">We're glad to have you on our platform of women entrepreneurs.</p>
-                    <span className="text-label-sm text-on-surface-variant/70 mt-1 block">Just now</span>
-                  </div>
+            {showNotifications && (
+              <div className="absolute right-0 mt-2 w-80 bg-surface border border-outline-variant rounded-2xl shadow-xl z-50 p-4 animate-fade-in-up">
+                <div className="flex justify-between items-center mb-3">
+                  <h4 className="text-title-sm font-bold text-on-surface">Notifications</h4>
+                  {unreadCount > 0 && (
+                    <span onClick={handleMarkAllRead} className="text-label-sm text-primary font-semibold cursor-pointer hover:underline">Mark all read</span>
+                  )}
+                </div>
+                <hr className="border-outline-variant mb-3" />
+                <div className="flex flex-col gap-3 max-h-60 overflow-y-auto">
+                  {notifications.length === 0 ? (
+                    <p className="text-label-md text-on-surface-variant text-center py-4">No notifications yet.</p>
+                  ) : (
+                    notifications.map((notif) => (
+                      <Link 
+                        key={notif._id} 
+                        to={notif.link || '#'} 
+                        onClick={() => setShowNotifications(false)}
+                        className={`flex gap-3 p-2 rounded-xl transition-colors ${notif.isRead ? 'hover:bg-surface-container-low' : 'bg-primary-container/20 hover:bg-primary-container/30'}`}
+                      >
+                        <div className="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center text-primary flex-shrink-0">
+                          <span className="material-symbols-outlined text-body-medium">
+                            {notif.type === 'inquiry' ? 'inbox' : 'notifications'}
+                          </span>
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-body-md text-on-surface font-semibold">{notif.title}</p>
+                          <p className="text-label-md text-on-surface-variant leading-relaxed">{notif.message}</p>
+                          <span className="text-label-sm text-on-surface-variant/70 mt-1 block">
+                            {new Date(notif.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </Link>
+                    ))
+                  )}
                 </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
 
         {/* Auth-Aware User Profile */}
         <div className="relative" ref={userRef}>

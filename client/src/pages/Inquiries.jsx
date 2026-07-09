@@ -25,12 +25,13 @@ const Inquiries = () => {
       const { data } = await getMyInquiries();
       setInquiries((prev) => {
         const prevNewCount = prev.filter((i) => i.status === 'new').length;
-        const currentNewCount = data.filter((i) => i.status === 'new').length;
+        const inquiriesList = data.inquiries || [];
+        const currentNewCount = inquiriesList.filter((i) => i.status === 'new').length;
         if (showToastOnIncrease && currentNewCount > prevNewCount) {
           setToastMessage('New inquiry received! 🔔');
           setTimeout(() => setToastMessage(''), 4500);
         }
-        return data;
+        return inquiriesList;
       });
     } catch {
       setInquiries([]);

@@ -57,6 +57,48 @@
   --font-label: 'Plus Jakarta Sans', sans-serif;
 }
 
+/* Dark Mode Theme Overrides */
+.dark {
+  --color-surface: #121212;
+  --color-surface-dim: #1a1a1a;
+  --color-surface-bright: #242424;
+  --color-surface-container-lowest: #0a0a0a;
+  --color-surface-container-low: #121212;
+  --color-surface-container: #1a1a1a;
+  --color-surface-container-high: #242424;
+  --color-surface-container-highest: #2a2a2a;
+  
+  --color-on-surface: #ffffff;
+  --color-on-surface-variant: #d4d4d4;
+  --color-inverse-surface: #e5e5e5;
+  --color-inverse-on-surface: #121212;
+  
+  --color-outline: #404040;
+  --color-outline-variant: #2a2a2a;
+  --color-surface-tint: #ffffff;
+  --color-surface-variant: #1a1a1a;
+
+  --color-primary: #ffffff;
+  --color-on-primary: #0a0a0a;
+  --color-primary-container: #242424;
+  --color-on-primary-container: #ffffff;
+  --color-inverse-primary: #0a0a0a;
+  
+  --color-secondary: #a3a3a3;
+  --color-on-secondary: #0a0a0a;
+  --color-secondary-container: #2a2a2a;
+  --color-on-secondary-container: #ffffff;
+
+  --color-background: #0a0a0a;
+  --color-on-background: #ffffff;
+  --color-warm-bg: #0a0a0a;
+
+  --color-white: #0a0a0a;
+  --color-black: #ffffff;
+  
+  --color-primary-hover: #e5e5e5;
+}
+
 /* Material Symbols Configuration */
 .material-symbols-outlined {
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
@@ -73,11 +115,12 @@
 
 body {
   font-family: var(--font-body);
-  background-color: #F7F5F0;
-  color: var(--color-black);
+  background-color: var(--color-background);
+  color: var(--color-on-background);
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Award-Winning Liquid Glass System (Premium Light Mode) */

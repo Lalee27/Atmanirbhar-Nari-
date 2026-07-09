@@ -50,7 +50,7 @@ const userSchema = new mongoose.Schema({
     enum: ['light', 'dark'],
     default: 'light',
   },
-});
+}, { optimisticConcurrency: true });
 
 // Hash password before saving
 userSchema.pre('save', async function () {
@@ -63,5 +63,8 @@ userSchema.methods.comparePassword = async function (enteredPassword) {
   if (!this.password) return false;
   return await bcrypt.compare(enteredPassword, this.password);
 };
+
+// Indexes
+userSchema.index({ role: 1 });
 
 module.exports = mongoose.model('User', userSchema);

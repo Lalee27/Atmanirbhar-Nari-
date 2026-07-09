@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { SocketProvider } from './context/SocketContext';
 import Layout from './components/Layout';
 import Home from './pages/Home';
 import Marketplace from './pages/Marketplace';
@@ -10,6 +11,8 @@ import LearningHub from './pages/LearningHub';
 import LearningSettings from './pages/LearningSettings';
 import BusinessMentor from './pages/BusinessMentor';
 import BusinessProfile from './pages/BusinessProfile';
+import DashboardProfileRouter from './components/DashboardProfileRouter';
+import Orders from './pages/Orders';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import AdminDashboard from './pages/AdminDashboard';
@@ -24,12 +27,27 @@ import FAQ from './pages/FAQ';
 import Contact from './pages/Contact';
 import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
+import { useEffect } from 'react';
 
 function App() {
+  useEffect(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('userInfo') || '{}');
+      if (stored.theme === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+
   return (
-    <Router>
-      <Routes>
-        <Route path="/login" element={<Login />} />
+    <SocketProvider>
+      <Router>
+        <Routes>
+          <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/" element={<Layout />}>
           <Route index element={<Home />} />
@@ -43,8 +61,9 @@ function App() {
           <Route path="marketplace/:id" element={<BusinessDetail />} />
           <Route path="inquiries" element={<Inquiries />} />
           <Route path="dashboard" element={<DashboardLayout />}>
-            <Route index element={<BusinessProfile />} />
-            <Route path="profile" element={<BusinessProfile />} />
+            <Route index element={<DashboardProfileRouter />} />
+            <Route path="profile" element={<DashboardProfileRouter />} />
+            <Route path="orders" element={<Orders />} />
             <Route path="settings" element={<SettingsView />} />
           </Route>
           
@@ -61,7 +80,8 @@ function App() {
           <Route path="terms" element={<Terms />} />
         </Route>
       </Routes>
-    </Router>
+      </Router>
+    </SocketProvider>
   );
 }
 

@@ -15,7 +15,7 @@ const mapCategoryFilter = (cat) => {
 // @desc    Get all verified businesses (marketplace)
 // @route   GET /api/businesses
 router.get('/', async (req, res) => {
-  const { category, city, availableToday, search, minPrice, maxPrice, minRating } = req.query;
+  const { category, city, availableToday, search, minPrice, maxPrice, minRating, page = 1, limit = 10 } = req.query;
 
   try {
     const filter = { verificationStatus: 'approved' };
@@ -41,21 +41,32 @@ router.get('/', async (req, res) => {
       filter.rating = { $gte: Number(minRating) };
     }
 
-    let businesses = await Business.find(filter)
-      .populate('owner', 'name profilePicture')
-      .sort({ createdAt: -1 });
-
     if (availableToday === 'true') {
       const day = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][
         new Date().getDay()
       ];
-      businesses = businesses.filter((b) => {
-        const hours = b.availability?.[day];
-        return hours && hours.toLowerCase() !== 'closed';
-      });
+      filter[`availability.${day}`] = { $ne: 'Closed', $exists: true };
     }
 
-    res.json(businesses);
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
+
+    const [businesses, total] = await Promise.all([
+      Business.find(filter)
+        .populate('owner', 'name profilePicture')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limitNum),
+      Business.countDocuments(filter)
+    ]);
+
+    res.json({
+      businesses,
+      totalPages: Math.ceil(total / limitNum),
+      currentPage: pageNum,
+      totalBusinesses: total
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -91,7 +102,7 @@ router.get('/:id', async (req, res) => {
 // @desc    Create/Update business profile
 // @route   POST /api/businesses
 router.post('/', protect, authorize('entrepreneur', 'admin'), async (req, res) => {
-  const { name, category, description, images, services, availability, location, phone } = req.body;
+  const { name, category, description, images, menuImages, services, availability, location, phone } = req.body;
 
   try {
     let business = await Business.findOne({ owner: req.user._id });
@@ -101,6 +112,7 @@ router.post('/', protect, authorize('entrepreneur', 'admin'), async (req, res) =
       business.category = category ?? business.category;
       business.description = description ?? business.description;
       if (images) business.images = images;
+      if (menuImages !== undefined) business.menuImages = menuImages;
       if (services) business.services = services;
       if (availability) business.availability = availability;
       if (location) {
@@ -118,6 +130,7 @@ router.post('/', protect, authorize('entrepreneur', 'admin'), async (req, res) =
         category,
         description,
         images: images || [],
+        menuImages: menuImages || [],
         services: services || [],
         availability,
         location,

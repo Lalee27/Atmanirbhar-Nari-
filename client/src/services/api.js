@@ -4,9 +4,6 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const API = axios.create({
   baseURL: API_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
 });
 
 API.interceptors.request.use((req) => {
@@ -43,6 +40,7 @@ export const resolveImageUrl = (url) => {
     url.startsWith('http://') || 
     url.startsWith('https://') || 
     url.startsWith('data:') || 
+    url.startsWith('blob:') ||
     url.startsWith('/categories/')
   ) {
     return url;
@@ -73,6 +71,10 @@ export const submitInquiry = (data) => API.post('/inquiries', data);
 export const getMyInquiries = () => API.get('/inquiries/mine');
 export const updateInquiryStatus = (id, status) => API.patch(`/inquiries/${id}`, { status });
 
+export const createOrder = (data) => API.post('/orders', data);
+export const getMyOrders = () => API.get('/orders/mine');
+export const updateOrderStatus = (id, data) => API.patch(`/orders/${id}`, data);
+
 export const getMentorTopics = () => API.get('/mentor/topics');
 export const getMentorAdvice = (data) => API.post('/mentor/advise', data);
 export const chatWithGemini = (data) => API.post('/gemini/chat', data);
@@ -84,13 +86,14 @@ export const moderateBusiness = (id, action) => API.patch(`/admin/businesses/${i
 export const getPendingMentors = () => API.get('/admin/mentors/pending');
 export const moderateMentor = (id, action) => API.patch(`/admin/mentors/${id}`, { action });
 export const submitMentorApplication = (formData) =>
-  API.post('/mentor/apply', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
+  API.post('/mentor/apply', formData);
 
 export const uploadImages = (formData) =>
-  API.post('/upload', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
+  API.post('/upload', formData);
+
+export const getNotifications = () => API.get('/notifications');
+export const markNotificationRead = (id) => API.patch(`/notifications/${id}/read`);
+export const markAllNotificationsRead = () => API.patch('/notifications/read-all');
 
 export default API;
+// Trigger Vite HMR

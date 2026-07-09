@@ -23,6 +23,27 @@ router.post('/', async (req, res) => {
       message,
     });
 
+    // Create a real-time notification for the business owner
+    const Notification = require('../models/Notification');
+    const { getIo } = require('../socket');
+    
+    if (business.owner) {
+      const notification = await Notification.create({
+        recipient: business.owner,
+        title: 'New Inquiry Received',
+        message: `${customerName} has sent an inquiry regarding your business.`,
+        type: 'inquiry',
+        link: '/dashboard/inquiries'
+      });
+
+      try {
+        const io = getIo();
+        io.to(business.owner.toString()).emit('new_notification', notification);
+      } catch (err) {
+        console.error('Socket.io error emitting notification:', err);
+      }
+    }
+
     res.status(201).json(inquiry);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -32,14 +53,32 @@ router.post('/', async (req, res) => {
 // @desc    Get inquiries for entrepreneur's business
 // @route   GET /api/inquiries/mine
 router.get('/mine', protect, authorize('entrepreneur', 'admin'), async (req, res) => {
+  const { page = 1, limit = 10 } = req.query;
+
   try {
     const business = await Business.findOne({ owner: req.user._id });
     if (!business) {
-      return res.json([]);
+      return res.json({ inquiries: [], totalPages: 0, currentPage: 1, totalInquiries: 0 });
     }
 
-    const inquiries = await Inquiry.find({ business: business._id }).sort({ createdAt: -1 });
-    res.json(inquiries);
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
+
+    const [inquiries, total] = await Promise.all([
+      Inquiry.find({ business: business._id })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limitNum),
+      Inquiry.countDocuments({ business: business._id })
+    ]);
+
+    res.json({
+      inquiries,
+      totalPages: Math.ceil(total / limitNum),
+      currentPage: pageNum,
+      totalInquiries: total
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

@@ -4,6 +4,7 @@ const serviceSchema = new mongoose.Schema({
   name: { type: String, required: true },
   price: { type: Number, required: true },
   description: { type: String },
+  image: { type: String },
 });
 
 const businessSchema = new mongoose.Schema({
@@ -46,6 +47,9 @@ const businessSchema = new mongoose.Schema({
   images: [{
     type: String,
   }],
+  menuImages: [{
+    type: String,
+  }],
   services: [serviceSchema],
   availability: {
     monday: { type: String, default: '09:00 - 18:00' },
@@ -77,6 +81,14 @@ const businessSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
-});
+}, { optimisticConcurrency: true });
+
+// Indexes for fast querying
+businessSchema.index({ category: 1 });
+businessSchema.index({ 'location.city': 1 });
+businessSchema.index({ verificationStatus: 1 });
+businessSchema.index({ rating: -1 });
+businessSchema.index({ createdAt: -1 });
+businessSchema.index({ owner: 1 });
 
 module.exports = mongoose.model('Business', businessSchema);

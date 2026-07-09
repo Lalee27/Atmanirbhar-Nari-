@@ -52,7 +52,7 @@ const Marketplace = () => {
           minRating: minRating || undefined,
         };
         const { data } = await getBusinesses(params);
-        setBusinesses(data);
+        setBusinesses(data.businesses || []);
       } catch {
         setBusinesses([]);
       } finally {

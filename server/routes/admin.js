@@ -53,11 +53,27 @@ router.get('/stats', async (req, res) => {
 // @desc    Pending business profiles
 // @route   GET /api/admin/pending
 router.get('/pending', async (req, res) => {
+  const { page = 1, limit = 10 } = req.query;
   try {
-    const businesses = await Business.find({ verificationStatus: 'pending' })
-      .populate('owner', 'name email')
-      .sort({ createdAt: -1 });
-    res.json(businesses);
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
+
+    const [businesses, total] = await Promise.all([
+      Business.find({ verificationStatus: 'pending' })
+        .populate('owner', 'name email')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limitNum),
+      Business.countDocuments({ verificationStatus: 'pending' })
+    ]);
+
+    res.json({
+      businesses,
+      totalPages: Math.ceil(total / limitNum),
+      currentPage: pageNum,
+      totalPending: total
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -96,9 +112,26 @@ router.patch('/businesses/:id', async (req, res) => {
 // @desc    Pending mentor applications
 // @route   GET /api/admin/mentors/pending
 router.get('/mentors/pending', async (req, res) => {
+  const { page = 1, limit = 10 } = req.query;
   try {
-    const mentors = await MentorApplication.find({ status: 'pending' }).sort({ createdAt: -1 });
-    res.json(mentors);
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
+
+    const [mentors, total] = await Promise.all([
+      MentorApplication.find({ status: 'pending' })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limitNum),
+      MentorApplication.countDocuments({ status: 'pending' })
+    ]);
+
+    res.json({
+      mentors,
+      totalPages: Math.ceil(total / limitNum),
+      currentPage: pageNum,
+      totalPending: total
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getMyBusiness, updateBusinessProfile, resolveImageUrl } from '../services/api';
+import { getMyBusiness, updateBusinessProfile, resolveImageUrl, uploadImages } from '../services/api';
 
 const CATEGORIES = [
   'Tiffin Services',
@@ -25,6 +25,7 @@ const BusinessProfile = () => {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
 
   const [name, setName] = useState('');
   const [category, setCategory] = useState(CATEGORIES[0]);
@@ -34,6 +35,7 @@ const BusinessProfile = () => {
   const [state, setState] = useState('');
   const [area, setArea] = useState('');
   const [images, setImages] = useState([CATEGORY_DEFAULT_IMAGES[CATEGORIES[0]]]);
+  const [menuImages, setMenuImages] = useState([]);
   const [services, setServices] = useState([{ name: '', price: '', description: '' }]);
 
   const handleCategoryChange = (cat) => {
@@ -59,6 +61,7 @@ const BusinessProfile = () => {
         setState(data.location?.state || '');
         setArea(data.location?.area || '');
         setImages(data.images?.length ? data.images : [CATEGORY_DEFAULT_IMAGES[data.category || CATEGORIES[0]]]);
+        if (data.menuImages?.length) setMenuImages(data.menuImages);
         if (data.services?.length) setServices(data.services);
         setStep(2);
       })
@@ -73,6 +76,40 @@ const BusinessProfile = () => {
     setServices(next);
   };
 
+  const handleImageUpload = async (e, type, index) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    // Check file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image is too large. Max size is 5MB.');
+      return;
+    }
+    
+    const formData = new FormData();
+    formData.append('images', file);
+    
+    try {
+      setLoading(true);
+      const { data } = await uploadImages(formData);
+      if (data.urls && data.urls.length > 0) {
+        const uploadedUrl = data.urls[0];
+        if (type === 'menuImage') {
+          const next = [...menuImages];
+          next[index] = uploadedUrl;
+          setMenuImages(next);
+        } else if (type === 'serviceImage') {
+          updateService(index, 'image', uploadedUrl);
+        }
+      }
+    } catch (err) {
+      alert('Failed to upload image. ' + (err.response?.data?.message || err.message));
+    } finally {
+      setLoading(false);
+      e.target.value = ''; // Reset file input
+    }
+  };
+
   const handleSubmit = async () => {
     setLoading(true);
     setError('');
@@ -83,13 +120,14 @@ const BusinessProfile = () => {
       phone,
       location: { city, state, area },
       images,
+      menuImages,
       services: services
         .filter((s) => s.name && s.price)
-        .map((s) => ({ ...s, price: Number(s.price) })),
+        .map((s) => ({ ...s, price: parseFloat(s.price) || 0 })),
     };
     try {
       await updateBusinessProfile(payload);
-      navigate('/dashboard');
+      setSuccess(true);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to save profile');
     } finally {
@@ -202,15 +240,62 @@ const BusinessProfile = () => {
                   </div>
                 )}
               </div>
-              <h3 className="text-label-lg font-semibold">Services & pricing</h3>
-              {services.map((s, i) => (
-                <div key={i} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <input placeholder="Service name" value={s.name} onChange={(e) => updateService(i, 'name', e.target.value)} className="h-14 px-5 rounded-2xl bg-black/5 border border-black/10 focus:border-black focus:bg-white outline-none text-body-md text-black transition-all shadow-inner" />
-                  <input placeholder="Price (₹)" type="number" value={s.price} onChange={(e) => updateService(i, 'price', e.target.value)} className="h-14 px-5 rounded-2xl bg-black/5 border border-black/10 focus:border-black focus:bg-white outline-none text-body-md text-black transition-all shadow-inner" />
-                  <input placeholder="Short description" value={s.description} onChange={(e) => updateService(i, 'description', e.target.value)} className="h-14 px-5 rounded-2xl bg-black/5 border border-black/10 focus:border-black focus:bg-white outline-none text-body-md text-black transition-all shadow-inner" />
+              
+              {['Tiffin Services', 'Cooking Classes'].includes(category) && (
+                <div className="space-y-3 pb-6 border-b border-black/10">
+                  <h3 className="text-label-lg font-semibold">Physical Menu Card Images</h3>
+                  <p className="text-body-sm text-on-surface-variant mb-2">Upload pictures of your printed or handwritten menu cards so customers can read them directly.</p>
+                  {menuImages.map((img, i) => (
+                    <div key={i} className="flex gap-2">
+                      <div className="flex-1 relative">
+                        <input placeholder="Menu Image URL" value={img} onChange={(e) => {
+                          const next = [...menuImages];
+                          next[i] = e.target.value;
+                          setMenuImages(next);
+                        }} className="w-full h-14 px-5 pr-12 rounded-2xl bg-black/5 border border-black/10 focus:border-black focus:bg-white outline-none text-body-md text-black transition-all shadow-inner" />
+                        <label className="absolute right-4 top-1/2 -translate-y-1/2 cursor-pointer text-gray-500 hover:text-black transition-colors" title="Upload Image from Device">
+                          <span className="material-symbols-outlined text-[24px]">upload_file</span>
+                          <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, 'menuImage', i)} />
+                        </label>
+                      </div>
+                      <button type="button" onClick={() => setMenuImages(menuImages.filter((_, idx) => idx !== i))} className="px-5 bg-error/10 text-error rounded-2xl font-bold hover:bg-error hover:text-white transition-colors">Remove</button>
+                    </div>
+                  ))}
+                  <button type="button" onClick={() => setMenuImages([...menuImages, ''])} className="text-primary font-semibold text-label-md hover:underline">+ Add Menu Image URL</button>
                 </div>
-              ))}
-              <button type="button" onClick={addService} className="text-secondary font-semibold text-label-md cursor-pointer hover:underline">+ Add another service</button>
+              )}
+              
+              <h3 className="text-label-lg font-semibold">
+                {['Tiffin Services', 'Cooking Classes'].includes(category) ? 'Menu items & pricing' : 
+                 ['Tailoring & Fashion', 'Handicrafts', 'Home Decors', 'Gardening & Plants'].includes(category) ? 'Catalog products & pricing' :
+                 ['Tuition & Coaching'].includes(category) ? 'Courses & pricing' : 'Services & pricing'}
+              </h3>
+              
+              {services.map((s, i) => {
+                const itemPlaceholder = ['Tiffin Services', 'Cooking Classes'].includes(category) ? 'Dish name' : 
+                                        ['Tailoring & Fashion', 'Handicrafts', 'Home Decors', 'Gardening & Plants'].includes(category) ? 'Product name' :
+                                        ['Tuition & Coaching'].includes(category) ? 'Course name' : 'Service name';
+                return (
+                  <div key={i} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <input placeholder={itemPlaceholder} value={s.name} onChange={(e) => updateService(i, 'name', e.target.value)} className="h-14 px-5 rounded-2xl bg-black/5 border border-black/10 focus:border-black focus:bg-white outline-none text-body-md text-black transition-all shadow-inner" />
+                    <input placeholder="Price (₹)" type="number" value={s.price} onChange={(e) => updateService(i, 'price', e.target.value)} className="h-14 px-5 rounded-2xl bg-black/5 border border-black/10 focus:border-black focus:bg-white outline-none text-body-md text-black transition-all shadow-inner" />
+                    <input placeholder="Short description" value={s.description} onChange={(e) => updateService(i, 'description', e.target.value)} className="h-14 px-5 rounded-2xl bg-black/5 border border-black/10 focus:border-black focus:bg-white outline-none text-body-md text-black transition-all shadow-inner" />
+                    <div className="relative">
+                      <input placeholder="Image URL (optional)" value={s.image || ''} onChange={(e) => updateService(i, 'image', e.target.value)} className="w-full h-14 px-5 pr-12 rounded-2xl bg-black/5 border border-black/10 focus:border-black focus:bg-white outline-none text-body-md text-black transition-all shadow-inner" />
+                      <label className="absolute right-4 top-1/2 -translate-y-1/2 cursor-pointer text-gray-500 hover:text-black transition-colors" title="Upload Image from Device">
+                        <span className="material-symbols-outlined text-[24px]">upload_file</span>
+                        <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, 'serviceImage', i)} />
+                      </label>
+                    </div>
+                  </div>
+                );
+              })}
+              <button type="button" onClick={addService} className="text-secondary font-semibold text-label-md cursor-pointer hover:underline">
+                {['Tiffin Services', 'Cooking Classes'].includes(category) ? '+ Add another dish' : 
+                 ['Tailoring & Fashion', 'Handicrafts', 'Home Decors', 'Gardening & Plants'].includes(category) ? '+ Add another product' :
+                 ['Tuition & Coaching'].includes(category) ? '+ Add another course' : '+ Add another service'}
+              </button>
+              
               <div className="flex justify-between">
                 <button type="button" onClick={() => setStep(2)} className="px-6 py-3 border border-black/10 hover:bg-black/5 text-black rounded-xl cursor-pointer font-semibold transition-all">Back</button>
                 <button type="button" onClick={() => setStep(4)} className="px-10 py-3.5 btn-bright rounded-xl cursor-pointer font-semibold">Continue</button>
@@ -218,7 +303,23 @@ const BusinessProfile = () => {
             </div>
           )}
 
-          {step === 4 && (
+          {step === 4 && success && (
+            <div className="space-y-6 animate-fade-in-up text-center py-10">
+              <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="material-symbols-outlined text-[40px]">check_circle</span>
+              </div>
+              <h2 className="text-3xl font-bold text-black">Profile Submitted!</h2>
+              <p className="text-gray-600 max-w-md mx-auto text-body-lg">
+                Your business profile has been successfully saved. It is now under review by our team.
+              </p>
+              <div className="pt-6 flex justify-center gap-4">
+                <button type="button" onClick={() => setSuccess(false)} className="px-6 py-3 border border-black/10 hover:bg-black/5 text-black rounded-xl cursor-pointer font-semibold transition-all">Edit Profile</button>
+                <button type="button" onClick={() => navigate('/marketplace')} className="px-8 py-3 btn-bright rounded-xl cursor-pointer font-semibold">View Marketplace</button>
+              </div>
+            </div>
+          )}
+
+          {step === 4 && !success && (
             <div className="space-y-6">
               <div className="p-6 bg-black/5 border-2 border-black/10 rounded-3xl flex flex-col md:flex-row gap-6 items-center md:items-start transition-all hover:bg-black/[0.07]">
                 <img src={logoPreview} alt="" className="w-24 h-24 rounded-2xl object-cover shadow-md" />

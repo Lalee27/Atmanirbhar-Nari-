@@ -16,6 +16,10 @@ const inquirySchema = new mongoose.Schema({
     default: 'new',
   },
   createdAt: { type: Date, default: Date.now },
-});
+}, { optimisticConcurrency: true });
+
+// Indexes for fast querying
+inquirySchema.index({ business: 1, createdAt: -1 });
+inquirySchema.index({ status: 1 });
 
 module.exports = mongoose.model('Inquiry', inquirySchema);

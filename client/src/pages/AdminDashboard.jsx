@@ -17,8 +17,8 @@ const AdminDashboard = () => {
         getPendingMentors()
       ]);
       setStats(statsRes.data);
-      setPending(pendingRes.data);
-      setPendingMentors(mentorsRes.data);
+      setPending(pendingRes.data.businesses || []);
+      setPendingMentors(mentorsRes.data.mentors || []);
     } catch {
       setStats(null);
       setPending([]);

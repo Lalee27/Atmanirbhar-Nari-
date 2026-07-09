@@ -49,6 +49,17 @@ const ApplyMentor = () => {
       });
 
       await submitMentorApplication(data);
+      setFormData({
+        fullName: '',
+        email: '',
+        phone: '',
+        linkedin: '',
+        expertise: '',
+        experience: '',
+        whyJoin: '',
+        image: null
+      });
+      setImagePreview(null);
       setSubmitted(true);
       setTimeout(() => {
         navigate('/mentors');

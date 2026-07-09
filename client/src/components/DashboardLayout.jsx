@@ -9,13 +9,14 @@ const DashboardLayout = () => {
   const [business, setBusiness] = useState(null);
   const [loading, setLoading] = useState(true);
   const [toastMessage, setToastMessage] = useState('');
-
-  let userInfo = {};
-  try {
-    userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
-  } catch (e) {
-    userInfo = {};
-  }
+  
+  const [userInfo, setUserInfo] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('userInfo') || '{}');
+    } catch (e) {
+      return {};
+    }
+  });
 
   // Redirect if not logged in
   if (!userInfo || !userInfo.token) {
@@ -27,12 +28,13 @@ const DashboardLayout = () => {
       const { data } = await getMyInquiries();
       setInquiries((prev) => {
         const prevNewCount = prev.filter((i) => i.status === 'new').length;
-        const currentNewCount = data.filter((i) => i.status === 'new').length;
+        const inquiriesList = data.inquiries || [];
+        const currentNewCount = inquiriesList.filter((i) => i.status === 'new').length;
         if (showToastOnIncrease && currentNewCount > prevNewCount) {
           setToastMessage('New inquiry received! 🔔');
           setTimeout(() => setToastMessage(''), 4500);
         }
-        return data;
+        return inquiriesList;
       });
     } catch {
       setInquiries([]);
@@ -84,12 +86,19 @@ const DashboardLayout = () => {
     if (role === 'entrepreneur') {
       links = [
         { name: 'Profile Settings', icon: 'person', path: '/dashboard' },
+        { name: 'Order Management', icon: 'inventory_2', path: '/dashboard/orders' },
+        { name: 'Customer Inquiries', icon: 'mail', path: '/inquiries' },
         { name: 'Business Mentor', icon: 'psychology', path: '/mentor' },
+        { name: 'Learning Hub', icon: 'school', path: '/learning' },
+        { name: 'Marketplace', icon: 'storefront', path: '/marketplace' },
       ];
     } else {
       // Customer by default
       links = [
-        { name: 'Profile Settings', icon: 'person', path: '/dashboard' },
+        { name: 'My Dashboard', icon: 'dashboard', path: '/dashboard' },
+        { name: 'My Orders', icon: 'local_shipping', path: '/dashboard/orders' },
+        { name: 'My Inquiries', icon: 'mail', path: '/inquiries' },
+        { name: 'Marketplace', icon: 'storefront', path: '/marketplace' },
       ];
     }
     return links;
@@ -177,12 +186,40 @@ const DashboardLayout = () => {
       </aside>
 
       {/* Main Panel Content */}
-      <main className="flex-1 min-w-0">
+      <main className="flex-1 min-w-0 flex flex-col">
+        {/* Dynamic Banner based on Role */}
+        {userInfo.role === 'entrepreneur' ? (
+          <div className="w-full h-48 md:h-64 rounded-3xl overflow-hidden relative shadow-2xl mb-8 animate-fade-in-up">
+            <img src="/entrepreneur_banner_realistic.png" alt="Empowering Entrepreneur" className="w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent flex items-center p-8 md:p-12">
+              <div className="text-white max-w-lg">
+                <h2 className="text-3xl md:text-4xl font-extrabold mb-3 leading-tight">Empowering Your Journey</h2>
+                <p className="text-white/90 text-sm md:text-base font-medium leading-relaxed">
+                  Manage your profile, reach more customers, and grow your enterprise with Aatmnirbhar Nari.
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="w-full h-48 md:h-64 rounded-3xl overflow-hidden relative shadow-2xl mb-8 animate-fade-in-up bg-black">
+            <img src="/login_nari_background.png" alt="Welcome Customer" className="w-full h-full object-cover opacity-60" />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent flex items-center p-8 md:p-12">
+              <div className="text-white max-w-lg">
+                <h2 className="text-3xl md:text-4xl font-extrabold mb-3 leading-tight">Welcome to Your Dashboard</h2>
+                <p className="text-white/90 text-sm md:text-base font-medium leading-relaxed">
+                  Explore local services, manage your inquiries, and learn new skills with Aatmnirbhar Nari.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <Outlet context={{ 
           inquiries, setInquiries, 
           business, 
           loading, 
-          userInfo, 
+          userInfo,
+          setUserInfo,
           newCount, 
           setToastMessage 
         }} />

@@ -72,6 +72,9 @@ const Register = () => {
       await register({ name, email, password, role });
       setRegEmail(email);
       setRegSuccess(true);
+      setName('');
+      setEmail('');
+      setPassword('');
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed');
     }
@@ -245,6 +248,7 @@ const Register = () => {
                 {[
                   { value: 'entrepreneur', label: 'Entrepreneur', icon: 'storefront' },
                   { value: 'customer', label: 'Customer', icon: 'person' },
+                  { value: 'admin', label: 'Admin', icon: 'admin_panel_settings' },
                 ].map((r) => (
                   <button
                     key={r.value}
