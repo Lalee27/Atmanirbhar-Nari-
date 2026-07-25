@@ -44,7 +44,7 @@ const Mentors = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="page-container animate-fade-in-up !pt-4 md:!pt-8">
+    <div className="page-container animate-fade-in-up !pt-0 -mt-8 md:-mt-12 relative z-10">
       <div className="text-center max-w-3xl mx-auto mb-16">
         <h1 className="text-headline-lg font-bold text-on-surface mb-4">
           Connect with <span className="text-gradient-primary">Expert Mentors</span>

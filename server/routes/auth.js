@@ -157,7 +157,14 @@ router.post('/verify', async (req, res) => {
     user.verificationTokenExpires = undefined;
     await user.save();
 
-    res.json({ message: 'Email verified successfully! You can now log in.' });
+    res.json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      token: generateToken(user._id),
+      message: 'Email verified successfully! You are now logged in.',
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

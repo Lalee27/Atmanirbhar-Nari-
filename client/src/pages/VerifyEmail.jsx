@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { verifyEmail, resendVerification } from '../services/api';
 import { CheckCircle, Loader2, Mail, ShieldCheck } from 'lucide-react';
 
 export default function VerifyEmail() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const urlEmail = searchParams.get('email') || '';
   const urlToken = searchParams.get('token') || '';
 
@@ -22,8 +23,13 @@ export default function VerifyEmail() {
         setStatus('loading');
         try {
           const { data } = await verifyEmail({ email: urlEmail, token: urlToken });
+          if (data.token) {
+            localStorage.setItem('userInfo', JSON.stringify(data));
+            window.dispatchEvent(new Event('auth-change'));
+            setTimeout(() => navigate('/dashboard'), 1500);
+          }
           setStatus('success');
-          setMessage(data.message || 'Email verified successfully!');
+          setMessage(data.message || 'Email verified successfully! Redirecting...');
         } catch (err) {
           setStatus('error');
           setMessage(err.response?.data?.message || 'Invalid or expired verification code.');
@@ -45,8 +51,13 @@ export default function VerifyEmail() {
     setMessage('');
     try {
       const { data } = await verifyEmail({ email: email.trim(), token: code.trim() });
+      if (data.token) {
+        localStorage.setItem('userInfo', JSON.stringify(data));
+        window.dispatchEvent(new Event('auth-change'));
+        setTimeout(() => navigate('/dashboard'), 1500);
+      }
       setStatus('success');
-      setMessage(data.message || 'Email verified successfully!');
+      setMessage(data.message || 'Email verified successfully! Redirecting...');
     } catch (err) {
       setStatus('error');
       setMessage(err.response?.data?.message || 'Invalid or expired verification code.');

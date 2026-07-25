@@ -132,15 +132,15 @@ const LearningHub = () => {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 space-y-6">
+      <main className="flex-1 min-w-0 space-y-6">
         {/* Filter Header */}
         <div className="w-full mb-6">
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 w-full">
+          <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-2 items-center">
             {categories.filter(cat => cat !== 'All').map((cat) => (
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
-                className={`category-toggle justify-center w-full ${selectedCategory === cat ? 'active' : ''}`}
+                className={`category-toggle whitespace-nowrap flex-shrink-0 ${selectedCategory === cat ? 'active' : ''}`}
               >
                 {cat}
               </button>
@@ -149,7 +149,7 @@ const LearningHub = () => {
         </div>
 
         {/* Bento-style Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {loading ? (
             <div className="col-span-full py-12 text-center text-on-surface-variant font-bold">
               Loading resources...
@@ -159,7 +159,7 @@ const LearningHub = () => {
               key={mod._id}
               className="standard-card group h-full"
             >
-              <div className="h-48 w-full overflow-hidden relative bg-black/5 flex-shrink-0">
+              <div className="aspect-video w-full overflow-hidden relative bg-black/5 flex-shrink-0">
                 {mod.videoUrl ? (
                   <iframe 
                     width="100%" 
@@ -206,32 +206,31 @@ const LearningHub = () => {
             </div>
           ))}
 
-          {/* Featured Card (Spans 2 columns) */}
-          <div className="standard-card md:col-span-2 p-8 flex flex-col md:flex-row gap-6 items-center">
-            <div className="flex-1">
-              <span className="bg-black/5 border border-black/10 text-black px-3 py-1 rounded-full text-label-md font-bold mb-4 inline-block">
-                RECORDED WORKSHOP
-              </span>
-              <h2 className="text-headline-lg text-black mb-4 font-bold">Mastering the Art of Sales</h2>
-              <p className="text-gray-600 text-body-md mb-6 opacity-90 leading-relaxed">
-                Watch our recorded live session with industry experts to learn negotiation skills and customer relationship management tailored for small business owners.
-              </p>
-              <div className="flex gap-4">
-                <button
-                  onClick={() => setWorkshopStatus('video')}
-                  className="btn-primary w-full mt-auto"
-                >
-                  <span className="material-symbols-outlined text-[18px]">play_circle</span>
-                  Watch Recording
-                </button>
-              </div>
-            </div>
-            <div className="w-full md:w-1/3 aspect-[16/9] md:aspect-[3/4] rounded-xl bg-black/5 flex items-center justify-center overflow-hidden border border-black/10 flex-shrink-0">
+          {/* Featured Card */}
+          <div className="standard-card group h-full">
+            <div className="aspect-video w-full overflow-hidden relative bg-black/5 flex-shrink-0">
               <img
                 alt="Workshop Group"
-                className="w-full h-full object-cover animate-pulse-subtle"
+                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                 src="https://images.unsplash.com/photo-1573164713988-8665fc963095?auto=format&fit=crop&q=80&w=800"
               />
+            </div>
+            <div className="p-4 flex-1 flex flex-col">
+              <div className="flex justify-between items-start mb-2">
+                <span className="text-terracotta-clay text-label-md font-semibold uppercase tracking-wider">RECORDED WORKSHOP</span>
+              </div>
+              <h3 className="text-headline-md mb-2 text-on-surface font-semibold">Mastering the Art of Sales</h3>
+              <p className="text-on-surface-variant text-body-md mb-4 leading-relaxed line-clamp-3">
+                Watch our recorded live session with industry experts to learn negotiation skills and customer relationship management tailored for small business owners.
+              </p>
+              
+              <button
+                onClick={() => setWorkshopStatus('video')}
+                className="w-full mt-auto py-3 bg-white text-black border border-black/10 text-button-text rounded-lg hover:bg-gray-100 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer btn-hover-lift font-semibold"
+              >
+                Watch Recording
+                <span className="material-symbols-outlined text-[20px]">play_circle</span>
+              </button>
             </div>
           </div>
         </div>
@@ -248,7 +247,7 @@ const LearningHub = () => {
       {/* Module Syllabus & Detail Modal */}
       {selectedModule && (
         <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
-          <div className="bg-surface border border-outline-variant max-w-lg w-full rounded-2xl shadow-2xl p-6 relative overflow-hidden animate-fade-in-up">
+          <div className="bg-surface border border-outline-variant max-w-md w-full rounded-2xl shadow-2xl p-6 relative max-h-[90vh] overflow-y-auto animate-fade-in-up">
             <button
               onClick={() => setSelectedModule(null)}
               className="absolute top-4 right-4 text-outline hover:text-on-surface cursor-pointer"
@@ -318,7 +317,7 @@ const LearningHub = () => {
       {/* Workshop Registration Modal */}
       {workshopStatus && (
         <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
-          <div className="bg-surface border border-outline-variant max-w-md w-full rounded-2xl shadow-2xl p-6 relative overflow-hidden animate-fade-in-up">
+          <div className="bg-surface border border-outline-variant max-w-md w-full rounded-2xl shadow-2xl p-6 relative max-h-[90vh] overflow-y-auto animate-fade-in-up">
             <button
               onClick={() => setWorkshopStatus(null)}
               className="absolute top-4 right-4 text-outline hover:text-on-surface cursor-pointer"

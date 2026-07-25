@@ -1,7 +1,6 @@
 import Hero from '../components/Hero';
 import SuccessStories from '../components/SuccessStories';
 import CTA from '../components/CTA';
-import Footer from '../components/Footer';
 
 const Home = () => {
   return (
@@ -9,7 +8,6 @@ const Home = () => {
       <Hero />
       <SuccessStories />
       <CTA />
-      <Footer />
     </div>
   );
 };

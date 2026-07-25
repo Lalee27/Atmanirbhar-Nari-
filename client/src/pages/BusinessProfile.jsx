@@ -207,7 +207,7 @@ const BusinessProfile = ({ businessToEdit, onCancel, onSuccess }) => {
       </aside>
 
       <section className="flex-1">
-        <div className="standard-card">
+        <div className="standard-card p-6 md:p-10 w-full">
           {error && <p className="mb-4 p-3 bg-error-container text-on-error-container rounded-lg text-label-md">{error}</p>}
 
           {step === 1 && (
@@ -223,57 +223,98 @@ const BusinessProfile = ({ businessToEdit, onCancel, onSuccess }) => {
           )}
 
           {step === 2 && (
-            <form className="flex flex-col gap-7" onSubmit={(e) => { e.preventDefault(); setStep(3); }}>
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-gray-600 uppercase tracking-wider pl-1">Business Name</label>
-                <input className="w-full h-14 px-5 rounded-2xl bg-black/5 border border-black/10 focus:border-black focus:bg-white outline-none text-body-md text-black transition-all shadow-inner" placeholder="E.g. Sharma Tiffin Services" value={name} onChange={(e) => setName(e.target.value)} required />
+            <div className="animate-fade-in">
+              <div className="mb-8">
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Business Details</h2>
+                <p className="text-gray-500">Tell us about your business so we can set up your storefront.</p>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {CATEGORIES.map((cat) => (
-                  <button 
-                    key={cat} 
-                    type="button" 
-                    onClick={() => handleCategoryChange(cat)} 
-                    className={`category-toggle ${category === cat ? 'active' : ''}`}
-                  >
-                    {cat}
+              <form className="flex flex-col gap-8" onSubmit={(e) => { e.preventDefault(); setStep(3); }}>
+                {/* Business Name */}
+                <div className="space-y-2 relative group">
+                  <label className="flex items-center gap-2 text-sm font-bold text-gray-700 pl-1">
+                    <span className="material-symbols-outlined text-[18px] text-primary">storefront</span>
+                    Business Name
+                  </label>
+                  <input className="w-full h-14 px-5 rounded-2xl bg-white border-2 border-gray-100 hover:border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none text-body-md text-gray-800 transition-all shadow-sm placeholder:text-gray-400" placeholder="E.g. Sharma Tiffin Services" value={name} onChange={(e) => setName(e.target.value)} required />
+                </div>
+
+                {/* Categories */}
+                <div className="space-y-3">
+                  <label className="flex items-center gap-2 text-sm font-bold text-gray-700 pl-1">
+                    <span className="material-symbols-outlined text-[18px] text-primary">category</span>
+                    Category
+                  </label>
+                  <div className="flex flex-wrap gap-3">
+                    {CATEGORIES.map((cat) => (
+                      <button 
+                        key={cat} 
+                        type="button" 
+                        onClick={() => handleCategoryChange(cat)} 
+                        className={`px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 border-2 ${category === cat ? 'bg-primary text-white border-primary shadow-md transform scale-105' : 'bg-white text-gray-600 border-gray-100 hover:border-gray-300 hover:bg-gray-50'}`}
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Business Description */}
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-sm font-bold text-gray-700 pl-1">
+                    <span className="material-symbols-outlined text-[18px] text-primary">description</span>
+                    Business Description
+                  </label>
+                  <textarea className="w-full p-5 rounded-2xl bg-white border-2 border-gray-100 hover:border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none text-body-md resize-none text-gray-800 transition-all shadow-sm placeholder:text-gray-400" rows={4} placeholder="Describe what you do, what makes your business special..." value={description} onChange={(e) => setDescription(e.target.value)} required />
+                </div>
+                
+                {/* Contact Phone */}
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-sm font-bold text-gray-700 pl-1">
+                    <span className="material-symbols-outlined text-[18px] text-primary">call</span>
+                    Contact Phone
+                  </label>
+                  <input className="w-full h-14 px-5 rounded-2xl bg-white border-2 border-gray-100 hover:border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none text-body-md text-gray-800 transition-all shadow-sm placeholder:text-gray-400" placeholder="+91 xxxxx xxxxx" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                </div>
+
+                {/* Location Details */}
+                <div className="space-y-3 p-6 bg-gray-50/50 rounded-3xl border border-gray-100">
+                  <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-1">
+                    <span className="material-symbols-outlined text-[18px] text-primary">location_on</span>
+                    Location Details
+                  </label>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <input className="h-12 px-4 rounded-xl bg-white border-2 border-gray-100 hover:border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none text-body-sm text-gray-800 transition-all shadow-sm placeholder:text-gray-400" placeholder="City" value={city} onChange={(e) => setCity(e.target.value)} />
+                    <input className="h-12 px-4 rounded-xl bg-white border-2 border-gray-100 hover:border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none text-body-sm text-gray-800 transition-all shadow-sm placeholder:text-gray-400" placeholder="State" value={state} onChange={(e) => setState(e.target.value)} />
+                    <input className="h-12 px-4 rounded-xl bg-white border-2 border-gray-100 hover:border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none text-body-sm text-gray-800 transition-all shadow-sm placeholder:text-gray-400" placeholder="Area / Locality" value={area} onChange={(e) => setArea(e.target.value)} />
+                  </div>
+                </div>
+
+                {/* Conditional Coaching Details */}
+                {category === 'Tuition & Coaching' && (
+                  <div className="space-y-5 p-6 bg-blue-50/50 rounded-3xl border border-blue-100 mt-2">
+                    <h3 className="text-sm font-bold text-blue-900 flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[18px]">school</span>
+                      Online Coaching Details
+                    </h3>
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-blue-800/80 uppercase tracking-wider pl-1">Demo Video URL (YouTube Embed Link)</label>
+                      <input className="w-full h-12 px-4 rounded-xl bg-white border-2 border-blue-100 focus:border-blue-400 focus:ring-4 focus:ring-blue-400/10 outline-none text-body-sm text-gray-800 transition-all shadow-sm placeholder:text-gray-400" placeholder="E.g. https://www.youtube.com/embed/..." value={demoVideoUrl} onChange={(e) => setDemoVideoUrl(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-blue-800/80 uppercase tracking-wider pl-1">Meeting Link (Zoom/Meet)</label>
+                      <input className="w-full h-12 px-4 rounded-xl bg-white border-2 border-blue-100 focus:border-blue-400 focus:ring-4 focus:ring-blue-400/10 outline-none text-body-sm text-gray-800 transition-all shadow-sm placeholder:text-gray-400" placeholder="E.g. https://zoom.us/j/..." value={meetingLink} onChange={(e) => setMeetingLink(e.target.value)} />
+                    </div>
+                  </div>
+                )}
+                
+                <div className="pt-4 flex justify-end">
+                  <button type="submit" className="btn-primary w-full sm:w-auto px-10 py-4 text-base shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center justify-center">
+                    Continue to Next Step
+                    <span className="material-symbols-outlined text-[20px] ml-2">arrow_forward</span>
                   </button>
-                ))}
-              </div>
-              <div className="space-y-1.5 mt-2">
-                <label className="text-xs font-bold text-gray-600 uppercase tracking-wider pl-1">Business Description</label>
-                <textarea className="w-full p-5 rounded-2xl bg-black/5 border border-black/10 focus:border-black focus:bg-white outline-none text-body-md resize-none text-black transition-all shadow-inner" rows={4} placeholder="Describe what you do..." value={description} onChange={(e) => setDescription(e.target.value)} required />
-              </div>
-              
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-gray-600 uppercase tracking-wider pl-1">Contact Phone</label>
-                <input className="w-full h-14 px-5 rounded-2xl bg-black/5 border border-black/10 focus:border-black focus:bg-white outline-none text-body-md text-black transition-all shadow-inner" placeholder="Phone number" value={phone} onChange={(e) => setPhone(e.target.value)} />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-gray-600 uppercase tracking-wider pl-1">Location Details</label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <input className="h-14 px-5 rounded-2xl bg-black/5 border border-black/10 focus:border-black focus:bg-white outline-none text-body-md text-black transition-all shadow-inner" placeholder="City" value={city} onChange={(e) => setCity(e.target.value)} />
-                  <input className="h-14 px-5 rounded-2xl bg-black/5 border border-black/10 focus:border-black focus:bg-white outline-none text-body-md text-black transition-all shadow-inner" placeholder="State" value={state} onChange={(e) => setState(e.target.value)} />
-                  <input className="h-14 px-5 rounded-2xl bg-black/5 border border-black/10 focus:border-black focus:bg-white outline-none text-body-md text-black transition-all shadow-inner" placeholder="Area / Locality" value={area} onChange={(e) => setArea(e.target.value)} />
                 </div>
-              </div>
-
-              {category === 'Tuition & Coaching' && (
-                <div className="space-y-4 pt-4 border-t border-black/10">
-                  <h3 className="text-label-lg font-semibold">Online Coaching Details</h3>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-gray-600 uppercase tracking-wider pl-1">Demo Video URL (YouTube Embed Link)</label>
-                    <input className="w-full h-14 px-5 rounded-2xl bg-black/5 border border-black/10 focus:border-black focus:bg-white outline-none text-body-md text-black transition-all shadow-inner" placeholder="E.g. https://www.youtube.com/embed/..." value={demoVideoUrl} onChange={(e) => setDemoVideoUrl(e.target.value)} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-gray-600 uppercase tracking-wider pl-1">Meeting Link (Zoom/Meet)</label>
-                    <input className="w-full h-14 px-5 rounded-2xl bg-black/5 border border-black/10 focus:border-black focus:bg-white outline-none text-body-md text-black transition-all shadow-inner" placeholder="E.g. https://zoom.us/j/..." value={meetingLink} onChange={(e) => setMeetingLink(e.target.value)} />
-                  </div>
-                </div>
-              )}
-              <button type="submit" className="btn-primary self-end">Continue</button>
-            </form>
+              </form>
+            </div>
           )}
 
           {step === 3 && (
