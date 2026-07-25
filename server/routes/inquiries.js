@@ -56,21 +56,24 @@ router.get('/mine', protect, authorize('entrepreneur', 'admin'), async (req, res
   const { page = 1, limit = 10 } = req.query;
 
   try {
-    const business = await Business.findOne({ owner: req.user._id });
-    if (!business) {
+    const businesses = await Business.find({ owner: req.user._id });
+    if (businesses.length === 0) {
       return res.json({ inquiries: [], totalPages: 0, currentPage: 1, totalInquiries: 0 });
     }
+
+    const businessIds = businesses.map(b => b._id);
 
     const pageNum = parseInt(page);
     const limitNum = parseInt(limit);
     const skip = (pageNum - 1) * limitNum;
 
     const [inquiries, total] = await Promise.all([
-      Inquiry.find({ business: business._id })
+      Inquiry.find({ business: { $in: businessIds } })
+        .populate('business', 'name')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limitNum),
-      Inquiry.countDocuments({ business: business._id })
+      Inquiry.countDocuments({ business: { $in: businessIds } })
     ]);
 
     res.json({
@@ -95,10 +98,14 @@ router.patch('/:id', protect, authorize('entrepreneur', 'admin'), async (req, re
       return res.status(404).json({ message: 'Inquiry not found' });
     }
 
-    const business = await Business.findOne({ owner: req.user._id });
+    const business = await Business.findById(inquiry.business._id);
+    if (!business) {
+      return res.status(404).json({ message: 'Business not found' });
+    }
+
     if (
       req.user.role !== 'admin' &&
-      (!business || inquiry.business._id.toString() !== business._id.toString())
+      business.owner.toString() !== req.user._id.toString()
     ) {
       return res.status(403).json({ message: 'Not authorized' });
     }

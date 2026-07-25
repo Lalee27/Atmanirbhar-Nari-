@@ -273,6 +273,7 @@ const Inquiries = () => {
                         <h4 className="font-bold text-sm text-black truncate">{inquiry.customerName}</h4>
                         <span className="text-[10px] text-gray-400 font-bold shrink-0">{formatTime(inquiry.createdAt)}</span>
                       </div>
+                      {inquiry.business && <p className="text-[10px] text-emerald-600 font-bold">For: {inquiry.business.name}</p>}
                       <p className="text-xs text-gray-600 line-clamp-2 leading-relaxed">{inquiry.message}</p>
                       <div className="pt-1 flex items-center gap-2">
                         {renderStatusBadge(inquiry.status)}

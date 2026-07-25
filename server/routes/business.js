@@ -72,13 +72,12 @@ router.get('/', async (req, res) => {
   }
 });
 
-// @desc    Get entrepreneur's own business
+// @desc    Get entrepreneur's businesses
 // @route   GET /api/businesses/mine
 router.get('/mine', protect, authorize('entrepreneur', 'admin'), async (req, res) => {
   try {
-    const business = await Business.findOne({ owner: req.user._id }).populate('owner', 'name profilePicture');
-    if (business) res.json(business);
-    else res.status(404).json({ message: 'No business profile yet' });
+    const businesses = await Business.find({ owner: req.user._id }).populate('owner', 'name profilePicture email');
+    res.json(businesses); // Return an array, even if empty
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -102,12 +101,20 @@ router.get('/:id', async (req, res) => {
 // @desc    Create/Update business profile
 // @route   POST /api/businesses
 router.post('/', protect, authorize('entrepreneur', 'admin'), async (req, res) => {
-  const { name, category, description, images, menuImages, services, availability, location, phone } = req.body;
+  const { _id, name, category, description, images, menuImages, services, availability, location, phone, demoVideoUrl, meetingLink } = req.body;
 
   try {
-    let business = await Business.findOne({ owner: req.user._id });
+    if (_id) {
+      // Update existing business
+      let business = await Business.findById(_id);
+      if (!business) {
+        return res.status(404).json({ message: 'Business not found' });
+      }
 
-    if (business) {
+      if (business.owner.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Unauthorized to update this business' });
+      }
+
       business.name = name ?? business.name;
       business.category = category ?? business.category;
       business.description = description ?? business.description;
@@ -119,11 +126,14 @@ router.post('/', protect, authorize('entrepreneur', 'admin'), async (req, res) =
         business.location = business.location || {};
         Object.assign(business.location, location);
       }
-      if (phone) business.phone = phone;
+      if (phone !== undefined) business.phone = phone;
+      if (demoVideoUrl !== undefined) business.demoVideoUrl = demoVideoUrl;
+      if (meetingLink !== undefined) business.meetingLink = meetingLink;
 
       const updatedBusiness = await business.save();
-      res.json(updatedBusiness);
+      return res.json(updatedBusiness);
     } else {
+      // Create new business
       const newBusiness = new Business({
         owner: req.user._id,
         name,
@@ -135,12 +145,14 @@ router.post('/', protect, authorize('entrepreneur', 'admin'), async (req, res) =
         availability,
         location,
         phone,
+        demoVideoUrl: demoVideoUrl || '',
+        meetingLink: meetingLink || '',
         verificationStatus: 'pending',
         isVerified: false,
       });
 
       const createdBusiness = await newBusiness.save();
-      res.status(201).json(createdBusiness);
+      return res.status(201).json(createdBusiness);
     }
   } catch (error) {
     res.status(500).json({ message: error.message });

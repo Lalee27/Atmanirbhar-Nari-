@@ -11,6 +11,7 @@ export default function Navbar() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [notifications, setNotifications] = useState([]);
+  const [toastMessage, setToastMessage] = useState('');
 
   const notifRef = useRef(null);
   const userRef = useRef(null);
@@ -46,7 +47,8 @@ export default function Navbar() {
     if (socket) {
       socket.on('new_notification', (notif) => {
         setNotifications((prev) => [notif, ...prev]);
-        // Optional: show a toast or play a sound here
+        setToastMessage(notif.title || 'New Notification Received! 🔔');
+        setTimeout(() => setToastMessage(''), 4500);
       });
 
       return () => {
@@ -58,13 +60,13 @@ export default function Navbar() {
   const handleMarkAllRead = async () => {
     try {
       await markAllNotificationsRead();
-      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+      setNotifications(prev => (prev || []).map(n => ({ ...n, isRead: true })));
     } catch (err) {
       console.error('Failed to mark all as read', err);
     }
   };
 
-  const unreadCount = notifications.filter(n => !n.isRead).length;
+  const unreadCount = (notifications || []).filter(n => !n?.isRead).length;
 
   // Click outside to close dropdowns
   useEffect(() => {
@@ -105,6 +107,17 @@ export default function Navbar() {
 
   return (
     <header className="flex justify-between items-center w-full h-16 px-5 md:px-16 z-50 fixed top-4 left-0 right-0 max-w-[1400px] mx-auto liquid-glass !overflow-visible rounded-2xl border border-black/5 text-black font-sans">
+      {/* Global Navbar Toast Alert */}
+      {toastMessage && (
+        <div className="fixed top-20 right-6 bg-white border border-black/10 text-black px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 z-[100] animate-fade-in-up">
+          <span className="material-symbols-outlined text-amber-600 text-[24px]">notifications_active</span>
+          <span className="font-semibold text-sm">{toastMessage}</span>
+          <button onClick={() => setToastMessage('')} className="ml-2 hover:opacity-85 cursor-pointer">
+            <span className="material-symbols-outlined text-[18px]">close</span>
+          </button>
+        </div>
+      )}
+
       <div className="flex items-center gap-4">
         <button
           onClick={() => setMenuOpen(!menuOpen)}
@@ -158,12 +171,12 @@ export default function Navbar() {
                 </div>
                 <hr className="border-outline-variant mb-3" />
                 <div className="flex flex-col gap-3 max-h-60 overflow-y-auto">
-                  {notifications.length === 0 ? (
+                  {(notifications || []).length === 0 ? (
                     <p className="text-label-md text-on-surface-variant text-center py-4">No notifications yet.</p>
                   ) : (
-                    notifications.map((notif) => (
+                    (notifications || []).map((notif) => (
                       <Link 
-                        key={notif._id} 
+                        key={notif._id || Math.random()} 
                         to={notif.link || '#'} 
                         onClick={() => setShowNotifications(false)}
                         className={`flex gap-3 p-2 rounded-xl transition-colors ${notif.isRead ? 'hover:bg-surface-container-low' : 'bg-primary-container/20 hover:bg-primary-container/30'}`}

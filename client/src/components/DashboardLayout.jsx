@@ -44,7 +44,8 @@ const DashboardLayout = () => {
   const fetchBusiness = async () => {
     try {
       const { data } = await getMyBusiness();
-      setBusiness(data);
+      // data is now an array of businesses
+      setBusiness(data.length > 0 ? data : null);
     } catch {
       setBusiness(null);
     }
@@ -217,6 +218,7 @@ const DashboardLayout = () => {
         <Outlet context={{ 
           inquiries, setInquiries, 
           business, 
+          fetchBusiness,
           loading, 
           userInfo,
           setUserInfo,

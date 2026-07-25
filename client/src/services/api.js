@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 const API = axios.create({
   baseURL: API_URL,
@@ -45,7 +45,7 @@ export const resolveImageUrl = (url) => {
   ) {
     return url;
   }
-  const baseURL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api$/, '');
+  const baseURL = (import.meta.env.VITE_API_URL || '/api').replace(/\/api$/, '');
   return `${baseURL}${url.startsWith('/') ? '' : '/'}${url}`;
 };
 
@@ -72,6 +72,8 @@ export const getMyInquiries = () => API.get('/inquiries/mine');
 export const updateInquiryStatus = (id, status) => API.patch(`/inquiries/${id}`, { status });
 
 export const createOrder = (data) => API.post('/orders', data);
+export const createRazorpayOrder = (data) => API.post('/orders/razorpay/create', data);
+export const verifyRazorpayPayment = (data) => API.post('/orders/razorpay/verify', data);
 export const getMyOrders = () => API.get('/orders/mine');
 export const updateOrderStatus = (id, data) => API.patch(`/orders/${id}`, data);
 
@@ -94,6 +96,18 @@ export const uploadImages = (formData) =>
 export const getNotifications = () => API.get('/notifications');
 export const markNotificationRead = (id) => API.patch(`/notifications/${id}/read`);
 export const markAllNotificationsRead = () => API.patch('/notifications/read-all');
+
+// Reports
+export const submitReport = (data) => API.post('/reports', data);
+export const getReports = (params) => API.get('/reports', { params });
+export const updateReportStatus = (id, status) => API.patch(`/reports/${id}`, { status });
+
+// Learning
+export const getLearningResources = () => API.get('/learning');
+export const getLearningResourceById = (id) => API.get(`/learning/${id}`);
+export const createLearningResource = (data) => API.post('/learning', data);
+export const updateLearningResource = (id, data) => API.put(`/learning/${id}`, data);
+export const deleteLearningResource = (id) => API.delete(`/learning/${id}`);
 
 export default API;
 // Trigger Vite HMR

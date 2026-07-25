@@ -5,9 +5,9 @@ services:
     image: mongo:7.0
     container_name: aatmanirbhar_nari_mongodb
     environment:
-      MONGO_INITDB_DATABASE: aatmanirbhar_nari
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: secure_password_123
+      MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE:-aatmanirbhar_nari}
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:-secure_password_123}
     ports:
       - "27017:27017"
     volumes:
@@ -27,11 +27,11 @@ services:
     build: ./server
     container_name: aatmanirbhar_nari_backend
     environment:
-      PORT: 5000
-      MONGO_URI: mongodb://admin:secure_password_123@mongodb:27017/aatmanirbhar_nari?authSource=admin
-      JWT_SECRET: your_super_secret_key_change_me_in_production
-      NODE_ENV: production
-      CLIENT_URL: http://localhost:3000
+      PORT: ${PORT:-5000}
+      MONGO_URI: mongodb://${MONGO_INITDB_ROOT_USERNAME:-admin}:${MONGO_INITDB_ROOT_PASSWORD:-secure_password_123}@mongodb:27017/${MONGO_INITDB_DATABASE:-aatmanirbhar_nari}?authSource=admin
+      JWT_SECRET: ${JWT_SECRET:-your_super_secret_key_change_me_in_production}
+      NODE_ENV: ${NODE_ENV:-production}
+      CLIENT_URL: ${CLIENT_URL:-http://localhost:3000}
     ports:
       - "5000:5000"
     depends_on:
@@ -58,11 +58,11 @@ services:
     image: mongo-express:latest
     container_name: aatmanirbhar_nari_mongo_express
     environment:
-      ME_CONFIG_MONGODB_ADMINUSERNAME: admin
-      ME_CONFIG_MONGODB_ADMINPASSWORD: secure_password_123
-      ME_CONFIG_MONGODB_URL: mongodb://admin:secure_password_123@mongodb:27017/
-      ME_CONFIG_BASICAUTH_USERNAME: admin
-      ME_CONFIG_BASICAUTH_PASSWORD: admin123
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_INITDB_ROOT_USERNAME:-admin}
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:-secure_password_123}
+      ME_CONFIG_MONGODB_URL: mongodb://${MONGO_INITDB_ROOT_USERNAME:-admin}:${MONGO_INITDB_ROOT_PASSWORD:-secure_password_123}@mongodb:27017/
+      ME_CONFIG_BASICAUTH_USERNAME: ${ME_CONFIG_BASICAUTH_USERNAME:-admin}
+      ME_CONFIG_BASICAUTH_PASSWORD: ${ME_CONFIG_BASICAUTH_PASSWORD:-admin123}
     ports:
       - "8081:8081"
     depends_on:

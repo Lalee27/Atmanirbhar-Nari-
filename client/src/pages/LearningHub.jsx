@@ -1,16 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { getLearningResources } from '../services/api';
 
 const LearningHub = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [selectedCategory, setSelectedCategory] = useState('Cooking Classes');
   const [activeTab, setActiveTab] = useState('All Resources');
   const [bookmarks, setBookmarks] = useState([]);
   const [selectedModule, setSelectedModule] = useState(null);
   const [workshopStatus, setWorkshopStatus] = useState(null); // null, 'registered', 'info'
-
-  const categories = ['All', 'Tailoring', 'Tiffin Services', 'Handicrafts'];
 
   const trendingTopics = [
     { title: 'GST for Small Business', tag: 'Compliance' },
@@ -18,52 +17,24 @@ const LearningHub = () => {
     { title: 'Micro-loans 101', tag: 'Financial Literacy' }
   ];
 
-  const modules = [
-    {
-      id: 1,
-      title: 'Pricing Your Products',
-      category: 'Financial Literacy',
-      desc: 'Learn how to calculate costs, overheads, and profit margins to ensure your business stays sustainable and grows.',
-      image: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&q=80&w=800',
-      actionText: 'Watch Video',
-      icon: 'play_circle',
-      pills: ['Financial Literacy', 'Tiffin Services', 'Handicrafts'],
-      videoUrl: 'https://www.youtube.com/embed/6eWnOmP3_Kk?start=65'
-    },
-    {
-      id: 2,
-      title: 'Business Registration',
-      category: 'Compliance',
-      desc: 'A step-by-step guide to MSME registration, GST, and local trade licenses required for women entrepreneurs in India.',
-      image: 'https://images.unsplash.com/photo-1554224154-26032ffc0d07?auto=format&fit=crop&q=80&w=800',
-      actionText: 'Watch Video',
-      icon: 'play_circle',
-      pills: ['Compliance', 'Tailoring', 'Tiffin Services', 'Handicrafts'],
-      videoUrl: 'https://www.youtube.com/embed/1k_07yksTYU'
-    },
-    {
-      id: 3,
-      title: 'Digital Marketing Basics',
-      category: 'Marketing',
-      desc: 'How to use WhatsApp and Instagram to find new customers and build a community around your brand.',
-      image: 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?auto=format&fit=crop&q=80&w=800',
-      actionText: 'Watch Video',
-      icon: 'play_circle',
-      pills: ['Marketing', 'Tailoring', 'Tiffin Services', 'Handicrafts'],
-      videoUrl: 'https://www.youtube.com/embed/INPXyUdIzW4'
-    },
-    {
-      id: 4,
-      title: 'Inventory Management',
-      category: 'Operations',
-      desc: 'Simple tools and methods to track your stock levels and never miss a customer order.',
-      image: 'https://images.unsplash.com/photo-1586880244406-556ebe35f282?auto=format&fit=crop&q=80&w=800',
-      actionText: 'Watch Video',
-      icon: 'play_circle',
-      pills: ['Operations', 'Handicrafts'],
-      videoUrl: 'https://www.youtube.com/embed/yl-e10EEspQ'
-    }
-  ];
+  const [modules, setModules] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const categories = ['All', ...new Set(modules.map(mod => mod.category))];
+
+  useEffect(() => {
+    const fetchResources = async () => {
+      try {
+        const { data } = await getLearningResources();
+        setModules(data || []);
+      } catch (error) {
+        console.error('Failed to load learning resources', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchResources();
+  }, []);
 
   // Sync bookmarks from localStorage
   useEffect(() => {
@@ -87,24 +58,25 @@ const LearningHub = () => {
 
   // Filtering logic
   const filteredModules = modules.filter(mod => {
+    const desc = mod.description || mod.desc || '';
     const matchesSearch = mod.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          mod.desc.toLowerCase().includes(searchQuery.toLowerCase());
+                          desc.toLowerCase().includes(searchQuery.toLowerCase());
     
-    const matchesCategory = selectedCategory === 'All' || mod.pills.includes(selectedCategory);
+    const matchesCategory = selectedCategory === 'All' || mod.category === selectedCategory;
 
     const matchesTrending = activeTab === 'Trending Topics' 
       ? trendingTopics.some(topic => mod.pills.includes(topic.tag) || mod.title.toLowerCase().includes(topic.title.toLowerCase()))
       : true;
 
     const matchesSaved = activeTab === 'Saved Resources'
-      ? bookmarks.includes(mod.id)
+      ? bookmarks.includes(mod._id)
       : true;
 
     return matchesSearch && matchesCategory && matchesTrending && matchesSaved;
   });
 
   return (
-    <div className="max-w-[1140px] mx-auto px-5 md:px-16 py-8 flex flex-col md:flex-row gap-8">
+    <div className="page-container flex flex-col md:flex-row gap-8 min-h-screen">
       {/* SideNavBar (Resources/Trending) */}
       <aside className="w-full md:w-64 gap-6 shrink-0 flex flex-col">
         <div>
@@ -133,8 +105,8 @@ const LearningHub = () => {
               }}
               className={`flex items-center gap-3 rounded-lg px-4 py-3 active:scale-98 transition-all text-left cursor-pointer ${
                 activeTab === tab.name
-                  ? 'bg-secondary-container text-on-secondary-container font-semibold shadow-sm'
-                  : 'text-on-surface-variant hover:bg-surface-container-high'
+                  ? 'bg-primary text-white font-semibold shadow-md'
+                  : 'text-on-surface-variant hover:bg-surface-container-high hover:text-primary'
               }`}
             >
               <span className="material-symbols-outlined">{tab.icon}</span>
@@ -161,34 +133,16 @@ const LearningHub = () => {
 
       {/* Main Content Area */}
       <main className="flex-1 space-y-6">
-        {/* Search & Filter Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="relative flex-1 max-w-xl">
-            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline">search</span>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 liquid-glass border border-black/10 rounded-xl focus:border-black/30 focus:ring-0 text-body-md transition-all outline-none placeholder:text-gray-400 text-black"
-              placeholder="Search resources (e.g., Marketing, Licenses)"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[18px]">close</span>
-              </button>
-            )}
-          </div>
-          <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0 hide-scrollbar">
-            {categories.map((cat) => (
+        {/* Filter Header */}
+        <div className="w-full mb-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 w-full">
+            {categories.filter(cat => cat !== 'All').map((cat) => (
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
-                className={`category-toggle ${selectedCategory === cat ? 'active' : ''}`}
+                className={`category-toggle justify-center w-full ${selectedCategory === cat ? 'active' : ''}`}
               >
-                {cat === 'All' ? 'Show All' : cat}
+                {cat}
               </button>
             ))}
           </div>
@@ -196,38 +150,54 @@ const LearningHub = () => {
 
         {/* Bento-style Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Loop over modules */}
-          {filteredModules.map((mod) => (
+          {loading ? (
+            <div className="col-span-full py-12 text-center text-on-surface-variant font-bold">
+              Loading resources...
+            </div>
+          ) : filteredModules.map((mod) => (
             <div
-              key={mod.id}
-              className="liquid-glass border border-black/5 rounded-xl overflow-hidden flex flex-col group hover:border-black/15 transition-colors card-hover"
+              key={mod._id}
+              className="standard-card group h-full"
             >
-              <div className="aspect-video w-full overflow-hidden relative">
-                <img
-                  alt={mod.title}
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  src={mod.image}
-                />
+              <div className="h-48 w-full overflow-hidden relative bg-black/5 flex-shrink-0">
+                {mod.videoUrl ? (
+                  <iframe 
+                    width="100%" 
+                    height="100%" 
+                    src={mod.videoUrl} 
+                    title={mod.title} 
+                    frameBorder="0" 
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                    referrerPolicy="strict-origin-when-cross-origin" 
+                    allowFullScreen
+                    className="w-full h-full object-cover"
+                  ></iframe>
+                ) : (
+                  <img
+                    alt={mod.title}
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    src={mod.image}
+                  />
+                )}
               </div>
-              <div className="p-4 flex-1 flex flex-col justify-between">
-                <div>
-                  <div className="flex justify-between items-start mb-2">
-                    <span className="text-terracotta-clay text-label-md font-semibold uppercase tracking-wider">{mod.category}</span>
-                    <button
-                      onClick={() => toggleBookmark(mod.id)}
-                      className="text-outline cursor-pointer hover:text-primary active:scale-90 transition-transform"
-                    >
-                      <span className={`material-symbols-outlined ${bookmarks.includes(mod.id) ? 'text-primary fill-current' : ''}`}>
-                        {bookmarks.includes(mod.id) ? 'bookmark' : 'bookmark_border'}
-                      </span>
-                    </button>
-                  </div>
-                  <h3 className="text-headline-md mb-2 text-on-surface font-semibold">{mod.title}</h3>
-                  <p className="text-on-surface-variant text-body-md mb-4 leading-relaxed line-clamp-3">{mod.desc}</p>
+              <div className="p-4 flex-1 flex flex-col">
+                <div className="flex justify-between items-start mb-2">
+                  <span className="text-terracotta-clay text-label-md font-semibold uppercase tracking-wider">{mod.category}</span>
+                  <button
+                    onClick={() => toggleBookmark(mod._id)}
+                    className="text-outline cursor-pointer hover:text-primary active:scale-90 transition-transform"
+                  >
+                    <span className={`material-symbols-outlined ${bookmarks.includes(mod._id) ? 'text-primary fill-current' : ''}`}>
+                      {bookmarks.includes(mod._id) ? 'bookmark' : 'bookmark_border'}
+                    </span>
+                  </button>
                 </div>
+                <h3 className="text-headline-md mb-2 text-on-surface font-semibold">{mod.title}</h3>
+                <p className="text-on-surface-variant text-body-md mb-4 leading-relaxed line-clamp-3">{mod.description || mod.desc}</p>
+                
                 <button
                   onClick={() => setSelectedModule(mod)}
-                  className="w-full py-3 bg-white text-black border border-black/10 text-button-text rounded-lg hover:bg-gray-100 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer btn-hover-lift font-semibold"
+                  className="w-full mt-auto py-3 bg-white text-black border border-black/10 text-button-text rounded-lg hover:bg-gray-100 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer btn-hover-lift font-semibold"
                 >
                   {mod.actionText}
                   <span className="material-symbols-outlined text-[20px]">{mod.icon}</span>
@@ -237,7 +207,7 @@ const LearningHub = () => {
           ))}
 
           {/* Featured Card (Spans 2 columns) */}
-          <div className="md:col-span-2 liquid-glass border border-black/10 rounded-xl p-8 flex flex-col md:flex-row gap-6 items-center shadow-sm relative overflow-hidden">
+          <div className="standard-card md:col-span-2 p-8 flex flex-col md:flex-row gap-6 items-center">
             <div className="flex-1">
               <span className="bg-black/5 border border-black/10 text-black px-3 py-1 rounded-full text-label-md font-bold mb-4 inline-block">
                 RECORDED WORKSHOP
@@ -249,9 +219,9 @@ const LearningHub = () => {
               <div className="flex gap-4">
                 <button
                   onClick={() => setWorkshopStatus('video')}
-                  className="px-6 py-3 btn-bright text-button-text rounded-lg active:scale-95 transition-all cursor-pointer font-semibold shadow-sm flex items-center gap-2"
+                  className="btn-primary w-full mt-auto"
                 >
-                  <span className="material-symbols-outlined text-[20px]">play_circle</span>
+                  <span className="material-symbols-outlined text-[18px]">play_circle</span>
                   Watch Recording
                 </button>
               </div>
@@ -266,7 +236,7 @@ const LearningHub = () => {
           </div>
         </div>
 
-        {filteredModules.length === 0 && (
+        {!loading && filteredModules.length === 0 && (
           <div className="text-center py-12 liquid-glass rounded-xl border border-black/5">
             <span className="material-symbols-outlined text-outline text-5xl mb-3">search_off</span>
             <p className="text-body-lg text-on-surface-variant font-semibold">No resources found matching "{searchQuery}"</p>
@@ -287,7 +257,7 @@ const LearningHub = () => {
             </button>
             <span className="text-terracotta-clay text-label-md font-bold uppercase tracking-wider block mb-2">{selectedModule.category}</span>
             <h3 className="text-headline-lg font-bold text-on-surface mb-3">{selectedModule.title}</h3>
-            <p className="text-on-surface-variant text-body-md leading-relaxed mb-6">{selectedModule.desc}</p>
+            <p className="text-on-surface-variant text-body-md leading-relaxed mb-6">{selectedModule.description || selectedModule.desc}</p>
 
             <div className="bg-surface-container-low p-4 rounded-xl mb-6">
               <h4 className="font-bold text-label-lg text-primary mb-2 flex items-center gap-2">

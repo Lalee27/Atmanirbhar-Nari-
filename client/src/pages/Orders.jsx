@@ -32,7 +32,7 @@ const Orders = () => {
       await updateOrderStatus(orderId, { status: newStatus });
       fetchOrders(); // refresh
     } catch (err) {
-      alert('Failed to update status');
+      alert('Failed to update status: ' + (err.response?.data?.message || err.message));
     }
   };
 
@@ -141,9 +141,16 @@ const Orders = () => {
                     <p className="text-[10px] text-gray-500 font-bold uppercase">Payment</p>
                     <div className="mt-1 flex flex-col gap-1">
                       <span className="text-xs font-bold text-black uppercase">{order.paymentMethod || 'COD'}</span>
-                      <span className={`inline-block px-2 py-0.5 rounded text-[9px] font-bold w-max ${order.paymentStatus === 'completed' ? 'bg-emerald-100 text-emerald-800' : 'bg-orange-100 text-orange-800'}`}>
-                        {order.paymentStatus || 'pending'}
-                      </span>
+                      {(() => {
+                        const isCOD = !order.paymentMethod || order.paymentMethod.toLowerCase() === 'cod';
+                        const isCompleted = order.paymentStatus === 'completed' || (order.status === 'delivered' && isCOD);
+                        const statusText = isCompleted ? 'completed' : (order.paymentStatus || 'pending');
+                        return (
+                          <span className={`inline-block px-2 py-0.5 rounded text-[9px] font-bold w-max ${isCompleted ? 'bg-emerald-100 text-emerald-800' : 'bg-orange-100 text-orange-800'}`}>
+                            {statusText}
+                          </span>
+                        );
+                      })()}
                     </div>
                   </div>
                 </div>

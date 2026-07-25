@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { getBusinessById, submitInquiry, createOrder, resolveImageUrl } from '../services/api';
+import { getBusinessById, submitInquiry, createOrder, resolveImageUrl, submitReport } from '../services/api';
 import ServiceMediaGallery from '../components/ServiceMediaGallery';
 import PaymentModal from '../components/PaymentModal';
 
@@ -26,6 +26,9 @@ const BusinessDetail = () => {
   const [showInquiry, setShowInquiry] = useState(false);
   const [inquiryForm, setInquiryForm] = useState({ customerName: '', customerEmail: '', customerPhone: '', message: '' });
   
+  const [showReport, setShowReport] = useState(false);
+  const [reportForm, setReportForm] = useState({ type: 'Spam', description: '' });
+  
   const [showOrder, setShowOrder] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
   const [cart, setCart] = useState([]);
@@ -49,6 +52,18 @@ const BusinessDetail = () => {
       setInquiryForm({ customerName: '', customerEmail: '', customerPhone: '', message: '' });
     } catch {
       setSubmitMsg('Failed to send inquiry. Please try again.');
+    }
+  };
+
+  const handleReport = async (e) => {
+    e.preventDefault();
+    try {
+      await submitReport({ targetBusiness: id, ...reportForm });
+      setSubmitMsg('Report submitted. Our team will review it shortly.');
+      setShowReport(false);
+      setReportForm({ type: 'Spam', description: '' });
+    } catch {
+      setSubmitMsg('Failed to submit report. Please try again.');
     }
   };
 
@@ -166,6 +181,38 @@ const BusinessDetail = () => {
             <p className="text-body-lg text-on-surface-variant leading-relaxed whitespace-pre-wrap">{business.description}</p>
           </section>
           
+          {business.category === 'Tuition & Coaching' && (business.demoVideoUrl || business.meetingLink) && (
+            <section className="bg-white p-8 rounded-2xl border border-black/10 shadow-sm space-y-4">
+              <h2 className="text-headline-md text-primary font-bold">Online Coaching Details</h2>
+              {business.demoVideoUrl && (
+                <div>
+                  <h3 className="text-label-lg font-semibold mb-2 flex items-center gap-2"><span className="material-symbols-outlined">play_circle</span> Demo Video</h3>
+                  <div className="rounded-lg overflow-hidden border border-black/10 aspect-video max-w-2xl">
+                    <iframe 
+                      width="100%" 
+                      height="100%" 
+                      src={business.demoVideoUrl} 
+                      title="Demo Video" 
+                      frameBorder="0" 
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                      referrerPolicy="strict-origin-when-cross-origin" 
+                      allowFullScreen
+                    ></iframe>
+                  </div>
+                </div>
+              )}
+              {business.meetingLink && (
+                <div className="pt-2">
+                  <h3 className="text-label-lg font-semibold mb-2 flex items-center gap-2"><span className="material-symbols-outlined">video_camera_front</span> Live Classes</h3>
+                  <a href={business.meetingLink.startsWith('http') ? business.meetingLink : `https://${business.meetingLink}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 hover:bg-blue-100 px-4 py-2 rounded-lg font-semibold transition-colors border border-blue-200">
+                    Join Meeting Link
+                    <span className="material-symbols-outlined text-sm">open_in_new</span>
+                  </a>
+                </div>
+              )}
+            </section>
+          )}
+          
           {business.images?.length > 1 && (
             <ServiceMediaGallery images={business.images} />
           )}
@@ -261,10 +308,14 @@ const BusinessDetail = () => {
             </button>
             
             {business.phone && (
-              <a href={`tel:${business.phone}`} className="block w-full text-center border border-black/10 hover:bg-black/5 text-black py-4 rounded-xl font-semibold transition-all shadow-sm">
+              <a href={`tel:${business.phone}`} className="block w-full text-center border border-black/10 hover:bg-black/5 text-black py-4 rounded-xl font-semibold transition-all shadow-sm mb-3">
                 Call {business.phone}
               </a>
             )}
+            
+            <button onClick={() => setShowReport(true)} className="w-full text-error border-2 border-error/50 hover:border-error hover:bg-error/5 py-3 rounded-xl font-semibold cursor-pointer transition-all flex items-center justify-center gap-2">
+              <span className="material-symbols-outlined">flag</span> Report Business
+            </button>
           </section>
         </aside>
       </div>
@@ -295,6 +346,43 @@ const BusinessDetail = () => {
             <div className="flex gap-3">
               <button type="button" onClick={() => setShowInquiry(false)} className="flex-1 py-3 border border-black/10 hover:bg-black/5 text-black rounded-xl cursor-pointer font-semibold transition-all">Cancel</button>
               <button type="submit" className="flex-1 py-3 btn-bright rounded-xl cursor-pointer font-semibold">Submit</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {showReport && (
+        <div className="fixed inset-0 bg-black/45 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+          <form onSubmit={handleReport} className="liquid-glass rounded-3xl p-8 max-w-md w-full space-y-4 shadow-2xl border border-black/10 animate-fade-in-up">
+            <h3 className="text-headline-md font-bold text-error flex items-center gap-2">
+              <span className="material-symbols-outlined">flag</span> Report Business
+            </h3>
+            <p className="text-body-sm text-on-surface-variant">Please let us know why you are reporting this profile.</p>
+            
+            <select 
+              required 
+              className="w-full h-11 px-4 rounded-xl border border-black/10 focus:border-black/30 outline-none liquid-glass text-body-md text-black transition-all shadow-sm" 
+              value={reportForm.type} 
+              onChange={(e) => setReportForm({ ...reportForm, type: e.target.value })}
+            >
+              <option value="Spam">Spam</option>
+              <option value="Fraud">Fraud or Scam</option>
+              <option value="Inappropriate Content">Inappropriate Content</option>
+              <option value="Other">Other</option>
+            </select>
+            
+            <textarea 
+              required 
+              rows={4} 
+              placeholder="Provide more details..." 
+              className="w-full p-4 rounded-xl border border-black/10 focus:border-black/30 outline-none liquid-glass text-body-md placeholder:text-gray-400 text-black transition-all shadow-sm resize-none" 
+              value={reportForm.description} 
+              onChange={(e) => setReportForm({ ...reportForm, description: e.target.value })} 
+            />
+            
+            <div className="flex gap-3 pt-2">
+              <button type="button" onClick={() => setShowReport(false)} className="flex-1 py-3 border border-black/10 hover:bg-black/5 text-black rounded-xl cursor-pointer font-semibold transition-all">Cancel</button>
+              <button type="submit" className="flex-1 py-3 bg-error hover:bg-error/90 text-white rounded-xl cursor-pointer font-semibold shadow-md">Submit Report</button>
             </div>
           </form>
         </div>

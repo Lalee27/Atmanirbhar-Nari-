@@ -64,18 +64,18 @@ const Marketplace = () => {
   }, [activeFilter, search, city, availableToday, minPrice, maxPrice, minRating]);
 
   const minPriceVal = (biz) => {
-    if (!biz.services?.length) return '—';
-    const min = Math.min(...biz.services.map((s) => s.price));
+    if (!biz?.services?.length) return '—';
+    const min = Math.min(...(biz.services || []).map((s) => s?.price || 0));
     return min;
   };
 
   const locationLabel = (biz) => {
-    const parts = [biz.location?.area, biz.location?.city].filter(Boolean);
+    const parts = [biz?.location?.area, biz?.location?.city].filter(Boolean);
     return parts.join(', ') || 'Local';
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-5 pt-6 pb-24 animate-fade-in-up">
+    <div className="page-container animate-fade-in-up">
       <section className="mb-8">
         <div className="flex flex-col gap-3 md:flex-row md:items-center">
           <div className="relative flex-grow">
@@ -218,11 +218,11 @@ const Marketplace = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {businesses.map((biz) => (
-              <div key={biz._id} className="liquid-glass rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all border border-black/5 card-hover group premium-card">
+            {(businesses || []).map((biz) => (
+              <div key={biz._id} className="standard-card group">
                 <div className="h-48 relative overflow-hidden">
                   <img
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    className="standard-card-img"
                     src={biz.images?.[0] ? resolveImageUrl(biz.images[0]) : 'https://images.unsplash.com/photo-1556740758-90de374c12ad?w=500'}
                     alt={biz.name}
                     loading="lazy"
@@ -252,7 +252,7 @@ const Marketplace = () => {
                       <p className="text-label-sm text-outline">Starts from</p>
                       <p className="text-headline-md text-primary font-bold">₹{minPriceVal(biz)}</p>
                     </div>
-                    <Link to={`/marketplace/${biz._id}`} className="bg-primary text-white px-4 py-2 rounded-lg text-label-md active:scale-95 cursor-pointer hover:opacity-90 font-bold shadow-sm transition-opacity">
+                    <Link to={`/marketplace/${biz._id}`} className="btn-primary py-2 px-4 text-sm mt-auto">
                       View
                     </Link>
                   </div>

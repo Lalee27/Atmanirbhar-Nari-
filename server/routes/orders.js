@@ -4,7 +4,14 @@ const Order = require('../models/Order');
 const Business = require('../models/Business');
 const { protect } = require('../middleware/auth');
 const mongoose = require('mongoose');
+const Razorpay = require('razorpay');
+const crypto = require('crypto');
 
+// Initialize Razorpay
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_placeholder_key_id',
+  key_secret: process.env.RAZORPAY_KEY_SECRET || 'rzp_test_placeholder_key_secret',
+});
 // POST /api/orders
 // Create a new order
 router.post('/', protect, async (req, res) => {
@@ -31,16 +38,76 @@ router.post('/', protect, async (req, res) => {
   }
 });
 
+// POST /api/orders/razorpay/create
+// Create a Razorpay order
+router.post('/razorpay/create', protect, async (req, res) => {
+  try {
+    const { amount } = req.body;
+    
+    if (!amount) {
+      return res.status(400).json({ message: 'Amount is required' });
+    }
+
+    const options = {
+      amount: amount * 100, // amount in smallest currency unit (paise)
+      currency: "INR",
+      receipt: `receipt_order_${Date.now()}`
+    };
+
+    const order = await razorpay.orders.create(options);
+
+    if (!order) {
+      return res.status(500).json({ message: 'Some error occurred' });
+    }
+
+    res.json(order);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server Error' });
+  }
+});
+
+// POST /api/orders/razorpay/verify
+// Verify Razorpay payment signature
+router.post('/razorpay/verify', protect, async (req, res) => {
+  try {
+    const { razorpayOrderId, razorpayPaymentId, signature } = req.body;
+    
+    // Pass either key_secret or the environment variable
+    const secret = process.env.RAZORPAY_KEY_SECRET || 'rzp_test_placeholder_key_secret';
+
+    const body = razorpayOrderId + "|" + razorpayPaymentId;
+
+    const expectedSignature = crypto
+      .createHmac("sha256", secret)
+      .update(body.toString())
+      .digest("hex");
+
+    const isAuthentic = expectedSignature === signature;
+
+    if (isAuthentic) {
+      res.json({ message: 'Payment verified successfully' });
+    } else {
+      res.status(400).json({ message: 'Invalid payment signature' });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server Error' });
+  }
+});
+
 // GET /api/orders/mine
-// Get orders for logged in user (customer gets their orders, entrepreneur gets orders for their business)
+// Get orders for logged in user (customer gets their orders, entrepreneur gets orders for their businesses)
 router.get('/mine', protect, async (req, res) => {
   try {
     if (req.user.role === 'entrepreneur' || req.user.role === 'admin') {
-      // Find the business owned by this user
-      const business = await Business.findOne({ owner: req.user._id });
-      if (business) {
-        const orders = await Order.find({ business: business._id })
+      // Find all businesses owned by this user
+      const businesses = await Business.find({ owner: req.user._id });
+      if (businesses.length > 0) {
+        const businessIds = businesses.map(b => b._id);
+        const orders = await Order.find({ business: { $in: businessIds } })
           .populate('customer', 'name email profilePicture')
+          .populate('business', 'name')
           .sort({ createdAt: -1 });
         return res.json(orders);
       }
@@ -72,14 +139,23 @@ router.patch('/:id', protect, async (req, res) => {
       return res.status(404).json({ message: 'Order not found' });
     }
 
-    // Ensure the entrepreneur owns the business of this order
-    const business = await Business.findOne({ owner: req.user._id });
-    if (!business || business._id.toString() !== order.business.toString()) {
+    const business = await Business.findById(order.business);
+    if (!business) {
+      return res.status(404).json({ message: 'Business not found' });
+    }
+
+    if (
+      req.user.role !== 'admin' &&
+      (!business.owner || business.owner.toString() !== req.user._id.toString())
+    ) {
       return res.status(403).json({ message: 'Not authorized to update this order' });
     }
 
     if (status) {
       order.status = status;
+      if (status === 'delivered' && order.paymentMethod === 'cod') {
+        order.paymentStatus = 'completed';
+      }
     }
     if (trackingLocation) {
       order.trackingLocation = trackingLocation;
@@ -89,7 +165,7 @@ router.patch('/:id', protect, async (req, res) => {
     res.json(order);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Server Error' });
+    res.status(500).json({ message: 'Server Error: ' + error.message, stack: error.stack });
   }
 });
 

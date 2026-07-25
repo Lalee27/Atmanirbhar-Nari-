@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Loader2 } from 'lucide-react';
+import { createRazorpayOrder, verifyRazorpayPayment } from '../services/api';
 
 const PaymentModal = ({ amount, onPaymentSuccess, onCancel }) => {
   const [method, setMethod] = useState('upi');
@@ -12,23 +13,79 @@ const PaymentModal = ({ amount, onPaymentSuccess, onCancel }) => {
   const [expiry, setExpiry] = useState('');
   const [cvv, setCvv] = useState('');
 
-  const handlePay = (e) => {
+  const handlePay = async (e) => {
     e.preventDefault();
     setLoading(true);
 
-    // Simulate payment processing delay (2 seconds)
-    setTimeout(() => {
-      setLoading(false);
-      setSuccess(true);
-      
-      // Notify parent component after a brief success animation
+    if (method === 'cod') {
+      // COD Logic
       setTimeout(() => {
-        onPaymentSuccess({
-          paymentMethod: method,
-          paymentStatus: method === 'cod' ? 'pending' : 'completed'
-        });
-      }, 1500);
-    }, 2000);
+        setLoading(false);
+        setSuccess(true);
+        setTimeout(() => {
+          onPaymentSuccess({ paymentMethod: 'cod', paymentStatus: 'pending' });
+        }, 1500);
+      }, 1000);
+      return;
+    }
+
+    try {
+      // 1. Create Order on Backend
+      const { data: order } = await createRazorpayOrder({ amount });
+
+      // 2. Open Razorpay Checkout Popup
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_placeholder_key_id',
+        amount: order.amount,
+        currency: order.currency,
+        name: "Aatmanirbhar Nari",
+        description: "Payment for your order",
+        order_id: order.id,
+        handler: async function (response) {
+          try {
+            // 3. Verify Payment Signature
+            await verifyRazorpayPayment({
+              razorpayOrderId: response.razorpay_order_id,
+              razorpayPaymentId: response.razorpay_payment_id,
+              signature: response.razorpay_signature
+            });
+
+            setSuccess(true);
+            setTimeout(() => {
+              onPaymentSuccess({
+                paymentMethod: 'online',
+                paymentStatus: 'completed',
+                razorpayPaymentId: response.razorpay_payment_id
+              });
+            }, 1500);
+          } catch (err) {
+            alert('Payment verification failed');
+            setLoading(false);
+          }
+        },
+        prefill: {
+          name: "Customer Name",
+          email: "customer@example.com",
+          contact: "9999999999"
+        },
+        theme: {
+          color: "#059669" // Emerald 600
+        }
+      };
+
+      const rzp = new window.Razorpay(options);
+      
+      rzp.on('payment.failed', function (response) {
+        alert('Payment failed: ' + response.error.description);
+        setLoading(false);
+      });
+      
+      rzp.open();
+    } catch (error) {
+      console.error(error);
+      alert('Error initiating payment. Please try again.');
+      setLoading(false);
+    }
   };
 
   if (success) {
@@ -118,56 +175,20 @@ const PaymentModal = ({ amount, onPaymentSuccess, onCancel }) => {
             {/* Dynamic Form Fields based on method */}
             <div className="min-h-[100px] mb-6">
               {method === 'upi' && (
-                <div className="animate-fade-in">
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Enter UPI ID</label>
-                  <input 
-                    type="text" 
-                    required 
-                    placeholder="example@upi" 
-                    className="w-full h-12 px-4 rounded-xl border border-gray-300 focus:border-emerald-600 outline-none text-sm bg-gray-50 focus:bg-white transition-colors"
-                    value={upiId}
-                    onChange={(e) => setUpiId(e.target.value)}
-                  />
+                <div className="animate-fade-in p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
+                  <p className="text-sm text-emerald-800 flex items-start gap-2">
+                    <span className="material-symbols-outlined text-[18px]">info</span>
+                    You will be securely redirected to Razorpay to complete your UPI payment.
+                  </p>
                 </div>
               )}
 
               {method === 'card' && (
-                <div className="animate-fade-in space-y-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Card Number</label>
-                    <input 
-                      type="text" 
-                      required 
-                      placeholder="XXXX XXXX XXXX XXXX" 
-                      className="w-full h-12 px-4 rounded-xl border border-gray-300 focus:border-emerald-600 outline-none text-sm bg-gray-50 focus:bg-white transition-colors tracking-widest"
-                      value={cardNumber}
-                      onChange={(e) => setCardNumber(e.target.value)}
-                    />
-                  </div>
-                  <div className="flex gap-3">
-                    <div className="flex-1">
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">Expiry (MM/YY)</label>
-                      <input 
-                        type="text" 
-                        required 
-                        placeholder="MM/YY" 
-                        className="w-full h-12 px-4 rounded-xl border border-gray-300 focus:border-emerald-600 outline-none text-sm bg-gray-50 focus:bg-white transition-colors text-center"
-                        value={expiry}
-                        onChange={(e) => setExpiry(e.target.value)}
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">CVV</label>
-                      <input 
-                        type="password" 
-                        required 
-                        placeholder="•••" 
-                        className="w-full h-12 px-4 rounded-xl border border-gray-300 focus:border-emerald-600 outline-none text-sm bg-gray-50 focus:bg-white transition-colors text-center tracking-widest"
-                        value={cvv}
-                        onChange={(e) => setCvv(e.target.value)}
-                      />
-                    </div>
-                  </div>
+                <div className="animate-fade-in p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
+                  <p className="text-sm text-emerald-800 flex items-start gap-2">
+                    <span className="material-symbols-outlined text-[18px]">info</span>
+                    You will be securely redirected to Razorpay to complete your Card payment.
+                  </p>
                 </div>
               )}
 
@@ -200,7 +221,7 @@ const PaymentModal = ({ amount, onPaymentSuccess, onCancel }) => {
             </button>
             <p className="text-center text-xs text-gray-400 mt-4 flex items-center justify-center gap-1">
               <span className="material-symbols-outlined text-[14px]">verified_user</span>
-              100% Secure Simulated Payment
+              100% Secure Payment by Razorpay
             </p>
           </form>
         </div>

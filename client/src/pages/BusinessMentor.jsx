@@ -80,8 +80,8 @@ const BusinessMentor = () => {
                   onClick={() => setCategory(cat)}
                   className={`text-left px-4 py-3 rounded-xl text-label-md transition-all cursor-pointer ${
                     category === cat
-                      ? 'bg-secondary-container text-on-secondary-container font-semibold shadow-sm scale-[1.02]'
-                      : 'border border-outline-variant text-on-surface-variant hover:bg-surface-container-low'
+                      ? 'bg-primary text-white font-semibold shadow-md scale-[1.02]'
+                      : 'border border-outline-variant text-on-surface-variant hover:bg-surface-container-low hover:text-primary'
                   }`}
                 >
                   {cat}

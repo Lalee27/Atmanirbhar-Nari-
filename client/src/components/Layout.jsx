@@ -4,7 +4,7 @@ import BottomNav from './BottomNav';
 
 export default function Layout() {
   return (
-    <div className="relative min-h-screen flex flex-col bg-[#F7F5F0] text-[#0a0a0a] font-sans overflow-hidden">
+    <div className="relative min-h-screen flex flex-col text-[var(--color-on-background)] font-sans overflow-hidden bg-transparent">
       
       {/* Global Hidden Details: Soft Airy Light Gradients */}
       <div className="fixed top-[-20%] left-[-10%] w-[60%] h-[60%] bg-gray-200/50 blur-[150px] rounded-full animate-pulse-subtle pointer-events-none z-0" style={{ animationDuration: '12s' }} />

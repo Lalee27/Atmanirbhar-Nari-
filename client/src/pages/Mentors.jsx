@@ -44,7 +44,7 @@ const Mentors = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 animate-fade-in-up">
+    <div className="page-container animate-fade-in-up !pt-4 md:!pt-8">
       <div className="text-center max-w-3xl mx-auto mb-16">
         <h1 className="text-headline-lg font-bold text-on-surface mb-4">
           Connect with <span className="text-gradient-primary">Expert Mentors</span>
@@ -57,12 +57,12 @@ const Mentors = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {MENTORS.map((mentor) => (
-          <div key={mentor.id} className="premium-card rounded-2xl overflow-hidden flex flex-col group hover:-translate-y-1 transition-all duration-300">
+          <div key={mentor.id} className="standard-card group">
             <div className="relative h-64 overflow-hidden">
               <img 
                 src={mentor.image} 
                 alt={mentor.name} 
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                className="standard-card-img"
               />
               <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full flex items-center gap-1 shadow-sm">
                 <span className="material-symbols-outlined text-yellow-500 text-[18px]">star</span>
@@ -95,7 +95,7 @@ const Mentors = () => {
               
               <button 
                 onClick={() => navigate('/book-session/' + mentor.id)}
-                className="w-full py-3 bg-primary text-white rounded-xl font-semibold btn-hover-lift shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2"
+                className="btn-primary w-full mt-auto"
               >
                 <span>Book a Session</span>
                 <span className="material-symbols-outlined text-[20px]">arrow_forward</span>
@@ -114,7 +114,7 @@ const Mentors = () => {
         </div>
         <button 
           onClick={() => navigate('/apply-mentor')}
-          className="px-8 py-4 bg-primary text-white rounded-xl font-bold whitespace-nowrap btn-hover-lift shadow-md hover:shadow-lg transition-all"
+          className="btn-primary flex-shrink-0"
         >
           Apply as Mentor
         </button>

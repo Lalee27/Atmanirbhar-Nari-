@@ -40,6 +40,8 @@ const businessSchema = new mongoose.Schema({
     area: { type: String, default: '' },
   },
   phone: { type: String, default: '' },
+  demoVideoUrl: { type: String, default: '' },
+  meetingLink: { type: String, default: '' },
   description: {
     type: String,
     required: true,

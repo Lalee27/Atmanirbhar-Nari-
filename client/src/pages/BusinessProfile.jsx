@@ -20,7 +20,7 @@ const CATEGORY_DEFAULT_IMAGES = {
 
 const STEPS = ['Account', 'Business Profile', 'Showcase', 'Review'];
 
-const BusinessProfile = () => {
+const BusinessProfile = ({ businessToEdit, onCancel, onSuccess }) => {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -31,6 +31,8 @@ const BusinessProfile = () => {
   const [category, setCategory] = useState(CATEGORIES[0]);
   const [description, setDescription] = useState('');
   const [phone, setPhone] = useState('');
+  const [demoVideoUrl, setDemoVideoUrl] = useState('');
+  const [meetingLink, setMeetingLink] = useState('');
   const [city, setCity] = useState('');
   const [state, setState] = useState('');
   const [area, setArea] = useState('');
@@ -51,22 +53,40 @@ const BusinessProfile = () => {
       navigate('/login');
       return;
     }
-    getMyBusiness()
-      .then(({ data }) => {
-        setName(data.name || '');
-        setCategory(data.category || CATEGORIES[0]);
-        setDescription(data.description || '');
-        setPhone(data.phone || '');
-        setCity(data.location?.city || '');
-        setState(data.location?.state || '');
-        setArea(data.location?.area || '');
-        setImages(data.images?.length ? data.images : [CATEGORY_DEFAULT_IMAGES[data.category || CATEGORIES[0]]]);
-        if (data.menuImages?.length) setMenuImages(data.menuImages);
-        if (data.services?.length) setServices(data.services);
-        setStep(2);
-      })
-      .catch(() => setStep(1));
-  }, [navigate]);
+
+    if (businessToEdit) {
+      // Editing existing business
+      const data = businessToEdit;
+      setName(data.name || '');
+      setCategory(data.category || CATEGORIES[0]);
+      setDescription(data.description || '');
+      setPhone(data.phone || '');
+      setDemoVideoUrl(data.demoVideoUrl || '');
+      setMeetingLink(data.meetingLink || '');
+      setCity(data.location?.city || '');
+      setState(data.location?.state || '');
+      setArea(data.location?.area || '');
+      setImages(data.images?.length ? data.images : [CATEGORY_DEFAULT_IMAGES[data.category || CATEGORIES[0]]]);
+      if (data.menuImages?.length) setMenuImages(data.menuImages);
+      if (data.services?.length) setServices(data.services);
+      setStep(2); // Skip step 1 if editing
+    } else {
+      // Creating new business, reset form
+      setName('');
+      setCategory(CATEGORIES[0]);
+      setDescription('');
+      setPhone('');
+      setDemoVideoUrl('');
+      setMeetingLink('');
+      setCity('');
+      setState('');
+      setArea('');
+      setImages([CATEGORY_DEFAULT_IMAGES[CATEGORIES[0]]]);
+      setMenuImages([]);
+      setServices([{ name: '', price: '', description: '' }]);
+      setStep(2); // Can skip account creation step since they are logged in
+    }
+  }, [navigate, businessToEdit]);
 
   const addService = () => setServices([...services, { name: '', price: '', description: '' }]);
 
@@ -114,10 +134,13 @@ const BusinessProfile = () => {
     setLoading(true);
     setError('');
     const payload = {
+      _id: businessToEdit?._id, // Passing _id tells the backend to update
       name,
       category,
       description,
       phone,
+      demoVideoUrl,
+      meetingLink,
       location: { city, state, area },
       images,
       menuImages,
@@ -128,6 +151,10 @@ const BusinessProfile = () => {
     try {
       await updateBusinessProfile(payload);
       setSuccess(true);
+      // Wait a bit, then notify parent to refresh businesses
+      setTimeout(() => {
+        if (onSuccess) onSuccess();
+      }, 2000);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to save profile');
     } finally {
@@ -138,10 +165,18 @@ const BusinessProfile = () => {
   const logoPreview = images[0] ? resolveImageUrl(images[0]) : 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&q=80&w=300';
 
   return (
-    <div className="flex flex-col md:flex-row gap-12 animate-fade-in-up">
+    <div className="page-container flex flex-col md:flex-row gap-12 animate-fade-in-up">
       <aside className="w-full md:w-1/3 flex flex-col gap-8 shrink-0">
         <div>
-          <h1 className="text-headline-lg text-on-surface font-bold">Entrepreneur Profile Wizard</h1>
+          {onCancel && (
+            <button onClick={onCancel} className="mb-4 text-gray-500 font-bold hover:text-black flex items-center gap-1 cursor-pointer">
+              <span className="material-symbols-outlined text-sm">arrow_back</span>
+              Back to My Businesses
+            </button>
+          )}
+          <h1 className="text-headline-lg text-on-surface font-bold">
+            {businessToEdit ? 'Edit Business Profile' : 'Entrepreneur Profile Wizard'}
+          </h1>
           <p className="text-body-md text-on-surface-variant">
             Step {step} of 4: {STEPS[step - 1]}
           </p>
@@ -172,13 +207,13 @@ const BusinessProfile = () => {
       </aside>
 
       <section className="flex-1">
-        <div className="premium-card rounded-3xl p-8 md:p-12 shadow-2xl shadow-black/5">
+        <div className="standard-card">
           {error && <p className="mb-4 p-3 bg-error-container text-on-error-container rounded-lg text-label-md">{error}</p>}
 
           {step === 1 && (
             <div className="space-y-4">
               <p className="text-body-md text-on-surface-variant">Create an account to register your business on the platform.</p>
-              <button type="button" onClick={() => navigate('/register')} className="px-8 py-3.5 btn-bright rounded-xl font-semibold cursor-pointer">
+              <button type="button" onClick={() => navigate('/register')} className="btn-primary">
                 Create Account
               </button>
               <button type="button" onClick={() => setStep(2)} className="block text-primary font-semibold hover:underline">
@@ -223,7 +258,21 @@ const BusinessProfile = () => {
                   <input className="h-14 px-5 rounded-2xl bg-black/5 border border-black/10 focus:border-black focus:bg-white outline-none text-body-md text-black transition-all shadow-inner" placeholder="Area / Locality" value={area} onChange={(e) => setArea(e.target.value)} />
                 </div>
               </div>
-              <button type="submit" className="self-end px-10 py-3.5 btn-bright rounded-xl font-semibold cursor-pointer">Continue</button>
+
+              {category === 'Tuition & Coaching' && (
+                <div className="space-y-4 pt-4 border-t border-black/10">
+                  <h3 className="text-label-lg font-semibold">Online Coaching Details</h3>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-gray-600 uppercase tracking-wider pl-1">Demo Video URL (YouTube Embed Link)</label>
+                    <input className="w-full h-14 px-5 rounded-2xl bg-black/5 border border-black/10 focus:border-black focus:bg-white outline-none text-body-md text-black transition-all shadow-inner" placeholder="E.g. https://www.youtube.com/embed/..." value={demoVideoUrl} onChange={(e) => setDemoVideoUrl(e.target.value)} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-gray-600 uppercase tracking-wider pl-1">Meeting Link (Zoom/Meet)</label>
+                    <input className="w-full h-14 px-5 rounded-2xl bg-black/5 border border-black/10 focus:border-black focus:bg-white outline-none text-body-md text-black transition-all shadow-inner" placeholder="E.g. https://zoom.us/j/..." value={meetingLink} onChange={(e) => setMeetingLink(e.target.value)} />
+                  </div>
+                </div>
+              )}
+              <button type="submit" className="btn-primary self-end">Continue</button>
             </form>
           )}
 
@@ -298,7 +347,7 @@ const BusinessProfile = () => {
               
               <div className="flex justify-between">
                 <button type="button" onClick={() => setStep(2)} className="px-6 py-3 border border-black/10 hover:bg-black/5 text-black rounded-xl cursor-pointer font-semibold transition-all">Back</button>
-                <button type="button" onClick={() => setStep(4)} className="px-10 py-3.5 btn-bright rounded-xl cursor-pointer font-semibold">Continue</button>
+                <button type="button" onClick={() => setStep(4)} className="btn-primary">Continue</button>
               </div>
             </div>
           )}
@@ -313,8 +362,7 @@ const BusinessProfile = () => {
                 Your business profile has been successfully saved. It is now under review by our team.
               </p>
               <div className="pt-6 flex justify-center gap-4">
-                <button type="button" onClick={() => setSuccess(false)} className="px-6 py-3 border border-black/10 hover:bg-black/5 text-black rounded-xl cursor-pointer font-semibold transition-all">Edit Profile</button>
-                <button type="button" onClick={() => navigate('/marketplace')} className="px-8 py-3 btn-bright rounded-xl cursor-pointer font-semibold">View Marketplace</button>
+                <button type="button" onClick={() => { if (onSuccess) onSuccess(); }} className="px-6 py-3 border border-black/10 hover:bg-black/5 text-black rounded-xl cursor-pointer font-semibold transition-all">Go Back</button>
               </div>
             </div>
           )}
