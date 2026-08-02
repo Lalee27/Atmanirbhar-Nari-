@@ -6,6 +6,11 @@ const inquirySchema = new mongoose.Schema({
     ref: 'Business',
     required: true,
   },
+  customer: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: false, // Optional for backward compatibility with existing data or guest inquiries
+  },
   customerName: { type: String, required: true },
   customerEmail: { type: String, required: true },
   customerPhone: { type: String, default: '' },
@@ -21,5 +26,6 @@ const inquirySchema = new mongoose.Schema({
 // Indexes for fast querying
 inquirySchema.index({ business: 1, createdAt: -1 });
 inquirySchema.index({ status: 1 });
+inquirySchema.index({ customer: 1 });
 
 module.exports = mongoose.model('Inquiry', inquirySchema);

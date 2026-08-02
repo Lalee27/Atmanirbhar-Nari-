@@ -3,6 +3,8 @@ const router = express.Router();
 const Order = require('../models/Order');
 const Business = require('../models/Business');
 const { protect } = require('../middleware/auth');
+const Notification = require('../models/Notification');
+const { getIo } = require('../socket');
 const mongoose = require('mongoose');
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
@@ -31,6 +33,25 @@ router.post('/', protect, async (req, res) => {
     });
 
     await order.save();
+    
+    // Notify the business owner
+    const business = await Business.findById(businessId);
+    if (business && business.owner) {
+      try {
+        const notification = await Notification.create({
+          recipient: business.owner,
+          title: 'New Order Received',
+          message: `A new order has been placed for ${business.name}.`,
+          type: 'business',
+          link: '/dashboard/orders'
+        });
+        const io = getIo();
+        io.to(business.owner.toString()).emit('new_notification', notification);
+      } catch (err) {
+        console.error('Socket.io error emitting order notification:', err);
+      }
+    }
+
     res.status(201).json(order);
   } catch (error) {
     console.error(error);
@@ -162,6 +183,24 @@ router.patch('/:id', protect, async (req, res) => {
     }
 
     await order.save();
+
+    // Notify the customer of status update
+    if (status) {
+      try {
+        const notification = await Notification.create({
+          recipient: order.customer,
+          title: 'Order Status Updated',
+          message: `Your order from ${business.name} is now ${status}.`,
+          type: 'business',
+          link: '/dashboard/orders' // Customer order page
+        });
+        const io = getIo();
+        io.to(order.customer.toString()).emit('new_notification', notification);
+      } catch (err) {
+        console.error('Socket.io error emitting order status notification:', err);
+      }
+    }
+
     res.json(order);
   } catch (error) {
     console.error(error);

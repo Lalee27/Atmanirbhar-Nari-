@@ -68,8 +68,14 @@ export const getMyBusiness = () => API.get('/businesses/mine');
 export const updateBusinessProfile = (data) => API.post('/businesses', data);
 
 export const submitInquiry = (data) => API.post('/inquiries', data);
-export const getMyInquiries = () => API.get('/inquiries/mine');
+export const getMyInquiries = (page = 1) => API.get(`/inquiries/mine?page=${page}`);
+export const getMyCustomerInquiries = () => API.get('/inquiries/my-inquiries');
 export const updateInquiryStatus = (id, status) => API.patch(`/inquiries/${id}`, { status });
+
+// Messages
+export const getMessages = (inquiryId) => API.get(`/messages/${inquiryId}`);
+export const sendMessage = (data) => API.post('/messages', data);
+export const markMessagesRead = (inquiryId) => API.patch(`/messages/read/${inquiryId}`);
 
 export const createOrder = (data) => API.post('/orders', data);
 export const createRazorpayOrder = (data) => API.post('/orders/razorpay/create', data);
@@ -108,6 +114,12 @@ export const getLearningResourceById = (id) => API.get(`/learning/${id}`);
 export const createLearningResource = (data) => API.post('/learning', data);
 export const updateLearningResource = (id, data) => API.put(`/learning/${id}`, data);
 export const deleteLearningResource = (id) => API.delete(`/learning/${id}`);
+
+// Categories
+export const getCategories = () => API.get('/categories');
+export const createCategory = (data) => API.post('/categories', data);
+export const updateCategory = (id, data) => API.put(`/categories/${id}`, data);
+export const deleteCategory = (id) => API.delete(`/categories/${id}`);
 
 export default API;
 // Trigger Vite HMR

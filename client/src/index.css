@@ -138,10 +138,6 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
   
   background-color: var(--color-background);
-  background-image: linear-gradient(color-mix(in srgb, var(--color-background) 85%, transparent), color-mix(in srgb, var(--color-background) 85%, transparent)), url('/login_nari_background.png');
-  background-size: cover;
-  background-position: center;
-  background-attachment: fixed;
 }
 
 /* Award-Winning Liquid Glass System (Premium Light Mode) */

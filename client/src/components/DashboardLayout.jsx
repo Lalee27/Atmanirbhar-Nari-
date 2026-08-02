@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, NavLink, Outlet, useLocation, Navigate } from 'react-router-dom';
-import { getMyInquiries, getMyBusiness, resolveImageUrl } from '../services/api';
+import { getMyInquiries, getMyBusiness, resolveImageUrl, getMyCustomerInquiries } from '../services/api';
 
 const DashboardLayout = () => {
   const navigate = useNavigate();
@@ -25,17 +25,22 @@ const DashboardLayout = () => {
 
   const fetchInquiries = async (showToastOnIncrease = false) => {
     try {
-      const { data } = await getMyInquiries();
-      setInquiries((prev) => {
-        const prevNewCount = prev.filter((i) => i.status === 'new').length;
-        const inquiriesList = data.inquiries || [];
-        const currentNewCount = inquiriesList.filter((i) => i.status === 'new').length;
-        if (showToastOnIncrease && currentNewCount > prevNewCount) {
-          setToastMessage('New inquiry received! 🔔');
-          setTimeout(() => setToastMessage(''), 4500);
-        }
-        return inquiriesList;
-      });
+      if (userInfo.role === 'customer') {
+        const { data } = await getMyCustomerInquiries();
+        setInquiries(data || []);
+      } else {
+        const { data } = await getMyInquiries();
+        setInquiries((prev) => {
+          const prevNewCount = prev.filter((i) => i.status === 'new').length;
+          const inquiriesList = data.inquiries || [];
+          const currentNewCount = inquiriesList.filter((i) => i.status === 'new').length;
+          if (showToastOnIncrease && currentNewCount > prevNewCount) {
+            setToastMessage('New inquiry received! 🔔');
+            setTimeout(() => setToastMessage(''), 4500);
+          }
+          return inquiriesList;
+        });
+      }
     } catch {
       setInquiries([]);
     }

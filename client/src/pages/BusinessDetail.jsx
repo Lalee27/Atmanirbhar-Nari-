@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { getBusinessById, submitInquiry, createOrder, resolveImageUrl, submitReport } from '../services/api';
+import { getBusinessById, submitInquiry, resolveImageUrl, submitReport } from '../services/api';
 import ServiceMediaGallery from '../components/ServiceMediaGallery';
-import PaymentModal from '../components/PaymentModal';
 
 const getCategoryDetails = (category) => {
   const foodCats = ['Tiffin Services', 'Cooking Classes'];
@@ -28,12 +27,6 @@ const BusinessDetail = () => {
   
   const [showReport, setShowReport] = useState(false);
   const [reportForm, setReportForm] = useState({ type: 'Spam', description: '' });
-  
-  const [showOrder, setShowOrder] = useState(false);
-  const [showPayment, setShowPayment] = useState(false);
-  const [cart, setCart] = useState([]);
-  const [orderForm, setOrderForm] = useState({ deliveryAddress: '', contactNumber: '' });
-  
   const [submitMsg, setSubmitMsg] = useState('');
 
   useEffect(() => {
@@ -46,7 +39,15 @@ const BusinessDetail = () => {
   const handleInquiry = async (e) => {
     e.preventDefault();
     try {
-      await submitInquiry({ businessId: id, ...inquiryForm });
+      let customerId = null;
+      try {
+        const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+        if (userInfo && userInfo._id) {
+          customerId = userInfo._id;
+        }
+      } catch (e) {}
+
+      await submitInquiry({ businessId: id, customerId, ...inquiryForm });
       setSubmitMsg('Inquiry sent! The entrepreneur will contact you soon.');
       setShowInquiry(false);
       setInquiryForm({ customerName: '', customerEmail: '', customerPhone: '', message: '' });
@@ -64,61 +65,6 @@ const BusinessDetail = () => {
       setReportForm({ type: 'Spam', description: '' });
     } catch {
       setSubmitMsg('Failed to submit report. Please try again.');
-    }
-  };
-
-  const addToCart = (svc) => {
-    setCart((prev) => {
-      const existing = prev.find(item => item.name === svc.name);
-      if (existing) {
-        return prev.map(item => item.name === svc.name ? { ...item, quantity: item.quantity + 1 } : item);
-      }
-      return [...prev, { ...svc, quantity: 1 }];
-    });
-  };
-
-  const removeFromCart = (svc) => {
-    setCart((prev) => {
-      const existing = prev.find(item => item.name === svc.name);
-      if (!existing) return prev;
-      if (existing.quantity === 1) {
-        return prev.filter(item => item.name !== svc.name);
-      }
-      return prev.map(item => item.name === svc.name ? { ...item, quantity: item.quantity - 1 } : item);
-    });
-  };
-
-  const getQuantity = (svc) => {
-    const item = cart.find(i => i.name === svc.name);
-    return item ? item.quantity : 0;
-  };
-
-  const totalAmount = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-
-  const initiatePayment = (e) => {
-    e.preventDefault();
-    setShowOrder(false);
-    setShowPayment(true);
-  };
-
-  const handleOrder = async (paymentDetails) => {
-    try {
-      await createOrder({
-        businessId: id,
-        items: cart.map(c => ({ name: c.name, price: c.price, quantity: c.quantity, image: c.image })),
-        totalAmount,
-        deliveryAddress: orderForm.deliveryAddress,
-        contactNumber: orderForm.contactNumber,
-        ...paymentDetails
-      });
-      setSubmitMsg('Success! Your order has been placed. Track it in your Dashboard.');
-      setShowPayment(false);
-      setOrderForm({ deliveryAddress: '', contactNumber: '' });
-      setCart([]);
-    } catch (err) {
-      setSubmitMsg(err.response?.data?.message || 'Failed to place order. Please try again.');
-      setShowPayment(false);
     }
   };
 
@@ -180,6 +126,21 @@ const BusinessDetail = () => {
             <h2 className="text-headline-md text-primary font-bold mb-4">About</h2>
             <p className="text-body-lg text-on-surface-variant leading-relaxed whitespace-pre-wrap">{business.description}</p>
           </section>
+          {business.startingPrice && (
+            <section className="bg-white p-8 rounded-2xl border border-black/10 shadow-sm flex items-center justify-between">
+              <div>
+                <h2 className="text-headline-md font-bold text-emerald-700 flex items-center gap-2">
+                  <span className="material-symbols-outlined">sell</span>
+                  Pricing Overview
+                </h2>
+                <p className="text-body-md text-gray-500 mt-1">Average starting prices for {business.category.toLowerCase()}</p>
+              </div>
+              <div className="text-right">
+                <span className="block text-sm text-gray-500 uppercase tracking-wide font-bold mb-1">Starts from</span>
+                <span className="text-4xl font-black text-gray-900 tracking-tight">₹{business.startingPrice}</span>
+              </div>
+            </section>
+          )}
           
           {business.category === 'Tuition & Coaching' && (business.demoVideoUrl || business.meetingLink) && (
             <section className="bg-white p-8 rounded-2xl border border-black/10 shadow-sm space-y-4">
@@ -220,82 +181,19 @@ const BusinessDetail = () => {
           {business.menuImages?.length > 0 && (
             <section className="space-y-6 pt-4">
               <h2 className="text-headline-md font-bold border-b pb-4 text-emerald-700 flex items-center gap-2">
-                <span className="material-symbols-outlined">restaurant_menu</span>
-                Menu Card
+                <span className="material-symbols-outlined">collections</span>
+                Portfolio / Menu
               </h2>
-              <p className="text-body-md text-on-surface-variant">Click on the image to view it in full size.</p>
+              <p className="text-body-md text-on-surface-variant">Click on an image to view it in full size.</p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {business.menuImages.map((img, i) => (
                   <div key={i} className="rounded-2xl overflow-hidden border border-black/10 shadow-sm cursor-zoom-in bg-white" onClick={() => window.open(img.startsWith('http') ? img : resolveImageUrl(img), '_blank')}>
-                    <img src={img.startsWith('http') ? img : resolveImageUrl(img)} alt={`Menu Card ${i + 1}`} className="w-full h-auto object-contain hover:scale-[1.02] transition-transform duration-500" />
+                    <img src={img.startsWith('http') ? img : resolveImageUrl(img)} alt={`Portfolio ${i + 1}`} className="w-full h-auto object-contain hover:scale-[1.02] transition-transform duration-500" />
                   </div>
                 ))}
               </div>
             </section>
           )}
-
-          <section className="space-y-6 pt-4">
-            <h2 className="text-headline-md font-bold border-b pb-4">{catDetails.section}</h2>
-            
-            {(!business.services || business.services.length === 0) ? (
-              <p className="text-on-surface-variant italic">No items listed yet.</p>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {business.services.map((svc, i) => {
-                  const qty = getQuantity(svc);
-                  return (
-                    <div key={i} className="liquid-glass border border-black/10 rounded-2xl p-5 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow group">
-                      <div className="flex flex-col gap-3">
-                        {svc.image && (
-                          <div className="h-40 rounded-xl overflow-hidden relative border border-black/5">
-                            <img src={svc.image.startsWith('http') ? svc.image : resolveImageUrl(svc.image)} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={svc.name} />
-                          </div>
-                        )}
-                        <div className="flex justify-between items-start gap-4">
-                          <div>
-                            <h3 className="text-xl font-bold text-on-surface group-hover:text-primary transition-colors">{svc.name}</h3>
-                            {svc.description && <p className="text-sm text-on-surface-variant mt-1 line-clamp-2">{svc.description}</p>}
-                          </div>
-                          <div className="text-right shrink-0">
-                            <p className="text-xl font-extrabold text-emerald-600">₹{svc.price}</p>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="mt-6">
-                        {qty > 0 && !isServiceOrEdu ? (
-                          <div className="flex items-center justify-between bg-primary/10 rounded-xl p-1 border border-primary/20">
-                            <button onClick={() => removeFromCart(svc)} className="w-10 h-10 flex items-center justify-center text-primary font-bold rounded-lg hover:bg-primary/20 cursor-pointer active:scale-95 transition-all">
-                              <span className="material-symbols-outlined">remove</span>
-                            </button>
-                            <span className="font-bold text-primary text-lg">{qty}</span>
-                            <button onClick={() => addToCart(svc)} className="w-10 h-10 flex items-center justify-center text-primary font-bold rounded-lg hover:bg-primary/20 cursor-pointer active:scale-95 transition-all">
-                              <span className="material-symbols-outlined">add</span>
-                            </button>
-                          </div>
-                        ) : qty > 0 && isServiceOrEdu ? (
-                          <button 
-                            onClick={() => removeFromCart(svc)}
-                            className="w-full py-3 rounded-xl bg-error/10 hover:bg-error hover:text-white text-error font-bold transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer"
-                          >
-                            <span className="material-symbols-outlined text-[20px]">close</span>
-                            Remove
-                          </button>
-                        ) : (
-                          <button 
-                            onClick={() => addToCart(svc)}
-                            className="w-full py-3 rounded-xl bg-primary/10 hover:bg-primary hover:text-white text-primary font-bold transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer"
-                          >
-                            <span className="material-symbols-outlined text-[20px]">{catDetails.icon}</span>
-                            {catDetails.action}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </section>
         </div>
 
         <aside className="lg:col-span-1 space-y-6">
@@ -320,32 +218,53 @@ const BusinessDetail = () => {
         </aside>
       </div>
 
-      {totalItems > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 p-4 z-40 flex justify-center animate-fade-in-up pointer-events-none">
-          <div className="bg-surface border border-outline-variant shadow-2xl rounded-2xl px-6 py-4 flex items-center justify-between gap-6 w-full max-w-2xl pointer-events-auto">
-            <div>
-              <p className="text-label-sm text-on-surface-variant font-bold uppercase tracking-wider">{totalItems} {totalItems === 1 ? 'Item' : 'Items'} in Cart</p>
-              <p className="text-headline-sm font-extrabold text-primary">₹{totalAmount}</p>
-            </div>
-            <button onClick={() => setShowOrder(true)} className="px-8 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-md transition-colors cursor-pointer flex items-center gap-2 active:scale-95">
-              <span className="material-symbols-outlined">shopping_cart_checkout</span>
-              Checkout
-            </button>
-          </div>
-        </div>
-      )}
-
       {showInquiry && (
         <div className="fixed inset-0 bg-black/45 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
           <form onSubmit={handleInquiry} className="liquid-glass rounded-3xl p-8 max-w-md w-full space-y-4 shadow-2xl border border-black/10 animate-fade-in-up">
-            <h3 className="text-headline-md font-bold">Send Inquiry</h3>
-            <input required placeholder="Your name" className="w-full h-11 px-4 rounded-xl border border-black/10 focus:border-black/30 outline-none liquid-glass text-body-md placeholder:text-gray-400 text-black transition-all shadow-sm" value={inquiryForm.customerName} onChange={(e) => setInquiryForm({ ...inquiryForm, customerName: e.target.value })} />
-            <input required type="email" placeholder="Email" className="w-full h-11 px-4 rounded-xl border border-black/10 focus:border-black/30 outline-none liquid-glass text-body-md placeholder:text-gray-400 text-black transition-all shadow-sm" value={inquiryForm.customerEmail} onChange={(e) => setInquiryForm({ ...inquiryForm, customerEmail: e.target.value })} />
-            <input placeholder="Phone (optional)" className="w-full h-11 px-4 rounded-xl border border-black/10 focus:border-black/30 outline-none liquid-glass text-body-md placeholder:text-gray-400 text-black transition-all shadow-sm" value={inquiryForm.customerPhone} onChange={(e) => setInquiryForm({ ...inquiryForm, customerPhone: e.target.value })} />
-            <textarea required rows={4} placeholder="Your message" className="w-full p-4 rounded-xl border border-black/10 focus:border-black/30 outline-none liquid-glass text-body-md placeholder:text-gray-400 text-black transition-all shadow-sm resize-none" value={inquiryForm.message} onChange={(e) => setInquiryForm({ ...inquiryForm, message: e.target.value })} />
-            <div className="flex gap-3">
-              <button type="button" onClick={() => setShowInquiry(false)} className="flex-1 py-3 border border-black/10 hover:bg-black/5 text-black rounded-xl cursor-pointer font-semibold transition-all">Cancel</button>
-              <button type="submit" className="flex-1 py-3 btn-bright rounded-xl cursor-pointer font-semibold">Submit</button>
+            <h3 className="text-headline-md font-bold text-primary flex items-center gap-2">
+              <span className="material-symbols-outlined">mail</span> Send Inquiry
+            </h3>
+            <p className="text-body-sm text-on-surface-variant">Provide your contact details and message to reach out to the entrepreneur.</p>
+            
+            <input 
+              required 
+              type="text"
+              placeholder="Your Name" 
+              className="w-full h-11 px-4 rounded-xl border border-black/10 focus:border-black/30 outline-none liquid-glass text-body-md text-black transition-all shadow-sm" 
+              value={inquiryForm.customerName} 
+              onChange={(e) => setInquiryForm({ ...inquiryForm, customerName: e.target.value })}
+            />
+            
+            <input 
+              required 
+              type="email"
+              placeholder="Your Email" 
+              className="w-full h-11 px-4 rounded-xl border border-black/10 focus:border-black/30 outline-none liquid-glass text-body-md text-black transition-all shadow-sm" 
+              value={inquiryForm.customerEmail} 
+              onChange={(e) => setInquiryForm({ ...inquiryForm, customerEmail: e.target.value })}
+            />
+            
+            <input 
+              required 
+              type="tel"
+              placeholder="Your Phone Number" 
+              className="w-full h-11 px-4 rounded-xl border border-black/10 focus:border-black/30 outline-none liquid-glass text-body-md text-black transition-all shadow-sm" 
+              value={inquiryForm.customerPhone} 
+              onChange={(e) => setInquiryForm({ ...inquiryForm, customerPhone: e.target.value })}
+            />
+            
+            <textarea 
+              required 
+              rows={4} 
+              placeholder="What are you looking for?" 
+              className="w-full p-4 rounded-xl border border-black/10 focus:border-black/30 outline-none liquid-glass text-body-md placeholder:text-gray-400 text-black transition-all shadow-sm resize-none" 
+              value={inquiryForm.message} 
+              onChange={(e) => setInquiryForm({ ...inquiryForm, message: e.target.value })} 
+            />
+            
+            <div className="flex gap-3 pt-2">
+               <button type="button" onClick={() => setShowInquiry(false)} className="flex-1 py-3 border border-black/10 hover:bg-black/5 text-black rounded-xl cursor-pointer font-semibold transition-all">Cancel</button>
+               <button type="submit" className="flex-1 py-3 btn-primary rounded-xl cursor-pointer font-semibold shadow-md">Send</button>
             </div>
           </form>
         </div>
@@ -381,80 +300,11 @@ const BusinessDetail = () => {
             />
             
             <div className="flex gap-3 pt-2">
-              <button type="button" onClick={() => setShowReport(false)} className="flex-1 py-3 border border-black/10 hover:bg-black/5 text-black rounded-xl cursor-pointer font-semibold transition-all">Cancel</button>
-              <button type="submit" className="flex-1 py-3 bg-error hover:bg-error/90 text-white rounded-xl cursor-pointer font-semibold shadow-md">Submit Report</button>
+               <button type="button" onClick={() => setShowReport(false)} className="flex-1 py-3 border border-black/10 hover:bg-black/5 text-black rounded-xl cursor-pointer font-semibold transition-all">Cancel</button>
+               <button type="submit" className="flex-1 py-3 bg-error hover:bg-error/90 text-white rounded-xl cursor-pointer font-semibold shadow-md">Submit Report</button>
             </div>
           </form>
         </div>
-      )}
-
-      {showOrder && cart.length > 0 && (
-        <div className="fixed inset-0 bg-black/45 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in overflow-y-auto">
-          <form onSubmit={initiatePayment} className="liquid-glass rounded-3xl p-8 max-w-md w-full space-y-4 shadow-2xl border border-black/10 animate-fade-in-up my-8">
-            <h3 className="text-xl font-bold mb-1 text-black">Complete Your Request</h3>
-            
-            <div className="bg-surface-container rounded-xl p-4 mb-4 border border-black/5 max-h-[30vh] overflow-y-auto">
-              <p className="text-sm text-on-surface-variant mb-3 font-semibold border-b pb-2">Order Summary</p>
-              <div className="space-y-3">
-                {cart.map((c, idx) => (
-                  <div key={idx} className="flex justify-between items-center text-sm">
-                    <div className="flex-1 pr-2">
-                      <p className="font-bold text-on-surface">{c.name}</p>
-                      <p className="text-xs text-on-surface-variant">₹{c.price} x {c.quantity}</p>
-                    </div>
-                    <p className="font-bold">₹{c.price * c.quantity}</p>
-                  </div>
-                ))}
-              </div>
-              <div className="flex justify-between items-center border-t mt-4 pt-3">
-                <span className="font-bold text-lg">Total Amount</span>
-                <span className="font-extrabold text-emerald-600 text-lg">₹{totalAmount}</span>
-              </div>
-            </div>
-            
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold text-gray-700">{catDetails.addressLabel} *</label>
-              <textarea 
-                required 
-                rows={3} 
-                placeholder={`Provide ${catDetails.addressLabel.toLowerCase()} details`} 
-                className="w-full p-3 rounded-xl border border-black/10 focus:border-black/30 outline-none liquid-glass text-sm placeholder:text-gray-400 text-black transition-all shadow-sm resize-none" 
-                value={orderForm.deliveryAddress} 
-                onChange={(e) => setOrderForm({ ...orderForm, deliveryAddress: e.target.value })} 
-              />
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold text-gray-700">Contact Number *</label>
-              <input 
-                required 
-                type="tel" 
-                placeholder="e.g. +91 9876543210" 
-                className="w-full h-11 px-4 rounded-xl border border-black/10 focus:border-black/30 outline-none liquid-glass text-sm placeholder:text-gray-400 text-black transition-all shadow-sm" 
-                value={orderForm.contactNumber} 
-                onChange={(e) => setOrderForm({ ...orderForm, contactNumber: e.target.value })} 
-              />
-            </div>
-
-            <div className="flex gap-3 mt-4">
-              <button type="button" onClick={() => setShowOrder(false)} className="flex-1 py-3 border border-black/10 hover:bg-black/5 text-black rounded-xl cursor-pointer font-semibold transition-all">Back to Menu</button>
-              <button type="submit" className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl cursor-pointer font-bold shadow-md transition-colors flex items-center justify-center gap-2">
-                {catDetails.actionPrefix} ₹{totalAmount}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {showPayment && (
-        <PaymentModal 
-          amount={totalAmount} 
-          onPaymentSuccess={handleOrder}
-          onCancel={() => {
-            setShowPayment(false);
-            setShowOrder(true); // Go back to order form
-          }}
-        />
       )}
     </div>
   );

@@ -40,19 +40,29 @@ app.use('/api', limiter);
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// Cache Middleware for Public Data
+const cacheControl = (req, res, next) => {
+  if (req.method === 'GET') {
+    res.set('Cache-Control', 'public, max-age=300'); // Cache for 5 minutes
+  }
+  next();
+};
+
 // Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/businesses', require('./routes/business'));
 app.use('/api/inquiries', require('./routes/inquiries'));
+app.use('/api/messages', require('./routes/messages'));
 app.use('/api/mentor', require('./routes/mentor'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/upload', require('./routes/upload'));
 app.use('/api/gemini', require('./routes/gemini'));
 app.use('/api/orders', require('./routes/orders'));
 app.use('/api/reports', require('./routes/reports'));
-app.use('/api/learning', require('./routes/learning'));
+app.use('/api/learning', cacheControl, require('./routes/learning'));
+app.use('/api/categories', cacheControl, require('./routes/categories'));
 
-app.get('/api/health', (req, res) => {
+app.get('/api/health', cacheControl, (req, res) => {
   res.json({ status: 'Aatmanirbhar Nari API is healthy' });
 });
 

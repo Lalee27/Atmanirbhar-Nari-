@@ -101,7 +101,7 @@ router.get('/:id', async (req, res) => {
 // @desc    Create/Update business profile
 // @route   POST /api/businesses
 router.post('/', protect, authorize('entrepreneur', 'admin'), async (req, res) => {
-  const { _id, name, category, description, images, menuImages, services, availability, location, phone, demoVideoUrl, meetingLink } = req.body;
+  const { _id, name, category, description, images, menuImages, services, availability, location, phone, demoVideoUrl, meetingLink, experienceLevel, startingPrice } = req.body;
 
   try {
     if (_id) {
@@ -118,6 +118,8 @@ router.post('/', protect, authorize('entrepreneur', 'admin'), async (req, res) =
       business.name = name ?? business.name;
       business.category = category ?? business.category;
       business.description = description ?? business.description;
+      business.experienceLevel = experienceLevel ?? business.experienceLevel;
+      business.startingPrice = startingPrice ?? business.startingPrice;
       if (images) business.images = images;
       if (menuImages !== undefined) business.menuImages = menuImages;
       if (services) business.services = services;
@@ -139,6 +141,8 @@ router.post('/', protect, authorize('entrepreneur', 'admin'), async (req, res) =
         name,
         category,
         description,
+        experienceLevel: experienceLevel || '',
+        startingPrice,
         images: images || [],
         menuImages: menuImages || [],
         services: services || [],

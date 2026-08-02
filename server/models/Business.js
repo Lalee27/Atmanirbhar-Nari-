@@ -20,18 +20,10 @@ const businessSchema = new mongoose.Schema({
   category: {
     type: String,
     required: true,
-    enum: [
-      'Tiffin Services', 
-      'Tailoring & Fashion', 
-      'Beauty & Wellness', 
-      'Handicrafts', 
-      'Tuition & Coaching', 
-      'Home Decors', 
-      'Cooking Classes', 
-      'Fitness & Yoga', 
-      'Gardening & Plants', 
-      'Event Management'
-    ],
+  },
+  experienceLevel: {
+    type: String,
+    default: '',
   },
   location: {
     city: { type: String, default: '' },
@@ -52,6 +44,9 @@ const businessSchema = new mongoose.Schema({
   menuImages: [{
     type: String,
   }],
+  startingPrice: {
+    type: Number,
+  },
   services: [serviceSchema],
   availability: {
     monday: { type: String, default: '09:00 - 18:00' },

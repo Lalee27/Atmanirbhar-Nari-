@@ -8,6 +8,8 @@ const User = require('../models/User');
 const { sendVerificationEmail, sendPasswordResetEmail } = require('../services/emailService');
 const { protect } = require('../middleware/auth');
 
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
 };
@@ -136,6 +138,84 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// @desc    Google Sign-In / Sign-Up
+// @route   POST /api/auth/google
+router.post('/google', async (req, res) => {
+  const { idToken, role } = req.body;
+
+  try {
+    let email, name, picture;
+
+    const isSimulated = 
+      idToken === 'simulated-google-token' || 
+      !process.env.GOOGLE_CLIENT_ID || 
+      process.env.GOOGLE_CLIENT_ID === 'your-google-client-id-here.apps.googleusercontent.com';
+
+    if (isSimulated) {
+      console.log('[Google Auth] Using simulated authentication');
+      email = req.body.email ? req.body.email.trim().toLowerCase() : 'simulated.user@example.com';
+      
+      if (email !== 'simulated.user@example.com') {
+        const emailCheck = await validateEmailExistence(email);
+        if (!emailCheck.valid) {
+          return res.status(400).json({ message: emailCheck.message });
+        }
+      }
+
+      if (req.body.name && req.body.name.trim()) {
+        name = req.body.name.trim();
+      } else {
+        const emailPrefix = email.split('@')[0];
+        name = emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1);
+      }
+      picture = 'https://lh3.googleusercontent.com/a/default-user=s96-c';
+    } else {
+      const ticket = await client.verifyIdToken({
+        idToken,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
+      const payload = ticket.getPayload();
+      email = payload.email;
+      name = payload.name;
+      picture = payload.picture;
+    }
+
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      // Create user if not exists
+      user = await User.create({
+        name,
+        email,
+        password: crypto.randomBytes(16).toString('hex'), // Random secure password
+        role: role || 'customer', // Default to customer if not provided
+        isVerified: true,
+        profilePicture: picture || '',
+      });
+      console.log(`[Google Auth] Created new user: ${email}`);
+    } else {
+      if (!user.isVerified) {
+        user.isVerified = true;
+        user.verificationToken = undefined;
+        user.verificationTokenExpires = undefined;
+        await user.save();
+      }
+      console.log(`[Google Auth] Logged in existing user: ${email}`);
+    }
+
+    res.json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      token: generateToken(user._id),
+    });
+  } catch (error) {
+    console.error('[Google Auth Error]:', error);
+    res.status(401).json({ message: 'Invalid Google token or authentication failed: ' + error.message });
+  }
+});
+
 // @desc    Verify email address
 // @route   POST /api/auth/verify
 router.post('/verify', async (req, res) => {
@@ -253,90 +333,7 @@ router.post('/reset-password', async (req, res) => {
   }
 });
 
-// @desc    Verify Google Sign-In and retrieve/create user
-// @route   POST /api/auth/google
-router.post('/google', async (req, res) => {
-  const { idToken, role } = req.body;
 
-  try {
-    let email, name, picture;
-
-    const isSimulated = 
-      idToken === 'simulated-google-token' || 
-      !process.env.GOOGLE_CLIENT_ID || 
-      process.env.GOOGLE_CLIENT_ID === 'your-google-client-id-here.apps.googleusercontent.com';
-
-    if (isSimulated) {
-      // Decode simulated payload or mock one
-      console.log('[Google Auth] Using simulated authentication');
-      email = req.body.email ? req.body.email.trim().toLowerCase() : 'simulated.user@example.com';
-      
-      // Validate simulated email domain existence
-      if (email !== 'simulated.user@example.com') {
-        const emailCheck = await validateEmailExistence(email);
-        if (!emailCheck.valid) {
-          return res.status(400).json({ message: emailCheck.message });
-        }
-      }
-
-      if (req.body.name && req.body.name.trim()) {
-        name = req.body.name.trim();
-      } else {
-        const emailPrefix = email.split('@')[0];
-        name = emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1);
-      }
-      
-      picture = 'https://lh3.googleusercontent.com/a/default-user=s96-c';
-    } else {
-      const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-      const ticket = await client.verifyIdToken({
-        idToken,
-        audience: process.env.GOOGLE_CLIENT_ID,
-      });
-      const payload = ticket.getPayload();
-      email = payload.email;
-      name = payload.name;
-      picture = payload.picture;
-    }
-
-    let user = await User.findOne({ email });
-
-    if (!user) {
-      if (!role) {
-        return res.status(404).json({ message: 'User not found. Please create an account on the Register page first.' });
-      }
-      // Create user if they don't exist (automatically verified via Google)
-      user = await User.create({
-        name,
-        email,
-        role: role,
-        isVerified: true,
-        profilePicture: picture || '',
-      });
-      console.log(`[Google Auth] Created new user: ${email}`);
-    } else {
-      // If user exists but is not verified, verify them since Google email is verified
-      if (!user.isVerified) {
-        user.isVerified = true;
-        user.verificationToken = undefined;
-        user.verificationTokenExpires = undefined;
-        await user.save();
-      }
-      console.log(`[Google Auth] Logged in existing user: ${email}`);
-    }
-
-    res.json({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      token: generateToken(user._id),
-    });
-  } catch (error) {
-    console.error('[Google Auth Error]:', error);
-    res.status(400).json({ message: 'Google authentication failed: ' + error.message });
-  }
-});
 
 // @desc    Send OTP for custom Google Sign-In flow
 // @route   POST /api/auth/google-otp-send

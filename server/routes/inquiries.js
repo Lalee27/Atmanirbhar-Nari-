@@ -7,7 +7,7 @@ const { protect, authorize } = require('../middleware/auth');
 // @desc    Submit inquiry (customer)
 // @route   POST /api/inquiries
 router.post('/', async (req, res) => {
-  const { businessId, customerName, customerEmail, customerPhone, message } = req.body;
+  const { businessId, customerId, customerName, customerEmail, customerPhone, message } = req.body;
 
   try {
     const business = await Business.findById(businessId);
@@ -21,6 +21,7 @@ router.post('/', async (req, res) => {
       customerEmail,
       customerPhone,
       message,
+      customer: customerId || undefined,
     });
 
     // Create a real-time notification for the business owner
@@ -50,6 +51,23 @@ router.post('/', async (req, res) => {
   }
 });
 
+// @desc    Get inquiries submitted by customer
+// @route   GET /api/inquiries/my-inquiries
+router.get('/my-inquiries', protect, async (req, res) => {
+  try {
+    const inquiries = await Inquiry.find({ customer: req.user._id })
+      .populate({
+        path: 'business',
+        select: 'name owner',
+        populate: { path: 'owner', select: 'name profilePicture' }
+      })
+      .sort({ createdAt: -1 });
+    res.json(inquiries);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // @desc    Get inquiries for entrepreneur's business
 // @route   GET /api/inquiries/mine
 router.get('/mine', protect, authorize('entrepreneur', 'admin'), async (req, res) => {
@@ -70,6 +88,7 @@ router.get('/mine', protect, authorize('entrepreneur', 'admin'), async (req, res
     const [inquiries, total] = await Promise.all([
       Inquiry.find({ business: { $in: businessIds } })
         .populate('business', 'name')
+        .populate('customer', 'name profilePicture role')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limitNum),
@@ -112,6 +131,28 @@ router.patch('/:id', protect, authorize('entrepreneur', 'admin'), async (req, re
 
     if (status) inquiry.status = status;
     await inquiry.save();
+
+    // Send notification to customer if they are registered
+    if (status && inquiry.customer) {
+      const Notification = require('../models/Notification');
+      const { getIo } = require('../socket');
+      
+      const notification = await Notification.create({
+        recipient: inquiry.customer,
+        title: 'Inquiry Status Updated',
+        message: `Your inquiry for ${business.name} is now marked as ${status}.`,
+        type: 'inquiry',
+        link: '/inquiries'
+      });
+      
+      try {
+        const io = getIo();
+        io.to(inquiry.customer.toString()).emit('new_notification', notification);
+      } catch (err) {
+        console.error('Socket.io error emitting notification:', err);
+      }
+    }
+
     res.json(inquiry);
   } catch (error) {
     res.status(500).json({ message: error.message });

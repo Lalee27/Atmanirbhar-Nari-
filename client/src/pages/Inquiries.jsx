@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
-import { updateInquiryStatus, getMyInquiries, getMyBusiness } from '../services/api';
+import { updateInquiryStatus, getMyInquiries, getMyBusiness, getMyCustomerInquiries } from '../services/api';
+import ChatBox from '../components/ChatBox';
 
 const Inquiries = () => {
   const navigate = useNavigate();
@@ -10,6 +11,7 @@ const Inquiries = () => {
   const [loading, setLoading] = useState(true);
   const [toastMessage, setToastMessage] = useState('');
   const [selected, setSelected] = useState(null);
+  const [showChat, setShowChat] = useState(false);
 
   let userInfo = {};
   try {
@@ -22,17 +24,22 @@ const Inquiries = () => {
 
   const fetchInquiries = async (showToastOnIncrease = false) => {
     try {
-      const { data } = await getMyInquiries();
-      setInquiries((prev) => {
-        const prevNewCount = prev.filter((i) => i.status === 'new').length;
-        const inquiriesList = data.inquiries || [];
-        const currentNewCount = inquiriesList.filter((i) => i.status === 'new').length;
-        if (showToastOnIncrease && currentNewCount > prevNewCount) {
-          setToastMessage('New inquiry received! 🔔');
-          setTimeout(() => setToastMessage(''), 4500);
-        }
-        return inquiriesList;
-      });
+      if (userInfo.role === 'customer') {
+        const { data } = await getMyCustomerInquiries();
+        setInquiries(data || []);
+      } else {
+        const { data } = await getMyInquiries();
+        setInquiries((prev) => {
+          const prevNewCount = prev.filter((i) => i.status === 'new').length;
+          const inquiriesList = data.inquiries || [];
+          const currentNewCount = inquiriesList.filter((i) => i.status === 'new').length;
+          if (showToastOnIncrease && currentNewCount > prevNewCount) {
+            setToastMessage('New inquiry received! 🔔');
+            setTimeout(() => setToastMessage(''), 4500);
+          }
+          return inquiriesList;
+        });
+      }
     } catch {
       setInquiries([]);
     }
@@ -264,13 +271,13 @@ const Inquiries = () => {
                         : 'hover:bg-black/[0.02]'
                     }`}
                   >
-                    <div className={`w-10 h-10 rounded-full shrink-0 flex items-center justify-center font-bold text-sm shadow-sm ${getAvatarColor(inquiry.customerName)}`}>
-                      {getInitials(inquiry.customerName)}
+                    <div className={`w-10 h-10 rounded-full shrink-0 flex items-center justify-center font-bold text-sm shadow-sm ${getAvatarColor(userInfo.role === 'customer' ? inquiry.business?.name : inquiry.customerName)}`}>
+                      {getInitials(userInfo.role === 'customer' ? inquiry.business?.name : inquiry.customerName)}
                     </div>
                     
                     <div className="flex-1 min-w-0 space-y-1">
                       <div className="flex justify-between items-center gap-2">
-                        <h4 className="font-bold text-sm text-black truncate">{inquiry.customerName}</h4>
+                        <h4 className="font-bold text-sm text-black truncate">{userInfo.role === 'customer' ? inquiry.business?.name : inquiry.customerName}</h4>
                         <span className="text-[10px] text-gray-400 font-bold shrink-0">{formatTime(inquiry.createdAt)}</span>
                       </div>
                       {inquiry.business && <p className="text-[10px] text-emerald-600 font-bold">For: {inquiry.business.name}</p>}
@@ -292,11 +299,11 @@ const Inquiries = () => {
                 <div className="space-y-4">
                   {/* Sender details header */}
                   <div className="flex items-center gap-3.5">
-                    <div className={`w-11 h-11 rounded-full flex items-center justify-center font-bold text-base shadow-sm ${getAvatarColor(selected.customerName)}`}>
-                      {getInitials(selected.customerName)}
+                    <div className={`w-11 h-11 rounded-full flex items-center justify-center font-bold text-base shadow-sm ${getAvatarColor(userInfo.role === 'customer' ? selected.business?.name : selected.customerName)}`}>
+                      {getInitials(userInfo.role === 'customer' ? selected.business?.name : selected.customerName)}
                     </div>
                     <div className="min-w-0 space-y-0.5">
-                      <h3 className="font-bold text-base text-black truncate">{selected.customerName}</h3>
+                      <h3 className="font-bold text-base text-black truncate">{userInfo.role === 'customer' ? selected.business?.name : selected.customerName}</h3>
                       <p className="text-[10px] text-gray-400 font-semibold flex items-center gap-1">
                         <span className="material-symbols-outlined text-[12px]">schedule</span>
                         {new Date(selected.createdAt).toLocaleString()}
@@ -308,7 +315,7 @@ const Inquiries = () => {
 
                   {/* Message body block */}
                   <div className="space-y-2">
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Customer Message</p>
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">{userInfo.role === 'customer' ? 'My Message' : 'Customer Message'}</p>
                     <div className="bg-black/[0.02] border border-black/5 rounded-2xl p-5 relative overflow-hidden">
                       <span className="material-symbols-outlined absolute right-3 bottom-3 text-black/5 text-[54px] pointer-events-none select-none font-bold">format_quote</span>
                       <p className="text-sm text-gray-700 leading-relaxed relative z-10 whitespace-pre-wrap">
@@ -352,32 +359,46 @@ const Inquiries = () => {
 
                 {/* Verification & Action buttons */}
                 <div className="space-y-3 pt-6 border-t border-black/5">
-                  <a 
-                    href={`mailto:${selected.customerEmail}?subject=Regarding your inquiry on Aatmanirbhar Nari`}
-                    className="w-full h-11 btn-bright font-semibold text-xs rounded-xl flex items-center justify-center gap-2 shadow-sm"
-                  >
-                    <span className="material-symbols-outlined text-[16px]">reply</span>
-                    Reply via Email
-                  </a>
-
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={() => handleStatus(selected._id, 'contacted')} 
-                      disabled={selected.status === 'contacted'}
-                      className="flex-1 h-10 bg-white hover:bg-gray-100 disabled:opacity-50 text-black border border-black/10 font-bold text-xs rounded-xl cursor-pointer flex items-center justify-center gap-1.5 transition-all shadow-sm"
+                  <div className="flex gap-2 mb-2">
+                    <a 
+                      href={`mailto:${userInfo.role === 'customer' && selected.business?.owner?.email ? selected.business.owner.email : selected.customerEmail}?subject=Regarding your inquiry on Aatmanirbhar Nari`}
+                      className="flex-1 h-11 btn-bright font-semibold text-xs rounded-xl flex items-center justify-center gap-2 shadow-sm"
                     >
-                      <span className="material-symbols-outlined text-[16px] text-emerald-600">check_circle</span>
-                      Mark Contacted
-                    </button>
-                    <button 
-                      onClick={() => handleStatus(selected._id, 'closed')} 
-                      disabled={selected.status === 'closed'}
-                      className="flex-1 h-10 bg-white hover:bg-gray-100 disabled:opacity-50 text-black border border-black/10 font-bold text-xs rounded-xl cursor-pointer flex items-center justify-center gap-1.5 transition-all shadow-sm"
-                    >
-                      <span className="material-symbols-outlined text-[16px] text-rose-600">cancel</span>
-                      Close Lead
-                    </button>
+                      <span className="material-symbols-outlined text-[16px]">reply</span>
+                      Email
+                    </a>
+                    
+                    {((userInfo.role === 'entrepreneur' && selected.customer) || (userInfo.role === 'customer' && selected.business?.owner)) && (
+                      <button 
+                        onClick={() => setShowChat(true)}
+                        className="flex-1 h-11 bg-black text-white hover:bg-gray-800 font-semibold text-xs rounded-xl cursor-pointer flex items-center justify-center gap-2 shadow-sm transition-all"
+                      >
+                        <span className="material-symbols-outlined text-[16px]">chat</span>
+                        Chat
+                      </button>
+                    )}
                   </div>
+
+                  {userInfo.role !== 'customer' && (
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => handleStatus(selected._id, 'contacted')} 
+                        disabled={selected.status === 'contacted'}
+                        className="flex-1 h-10 bg-white hover:bg-gray-100 disabled:opacity-50 text-black border border-black/10 font-bold text-xs rounded-xl cursor-pointer flex items-center justify-center gap-1.5 transition-all shadow-sm"
+                      >
+                        <span className="material-symbols-outlined text-[16px] text-emerald-600">check_circle</span>
+                        Mark Contacted
+                      </button>
+                      <button 
+                        onClick={() => handleStatus(selected._id, 'closed')} 
+                        disabled={selected.status === 'closed'}
+                        className="flex-1 h-10 bg-white hover:bg-gray-100 disabled:opacity-50 text-black border border-black/10 font-bold text-xs rounded-xl cursor-pointer flex items-center justify-center gap-1.5 transition-all shadow-sm"
+                      >
+                        <span className="material-symbols-outlined text-[16px] text-rose-600">cancel</span>
+                        Close Lead
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (
@@ -394,6 +415,15 @@ const Inquiries = () => {
           </div>
         </section>
       </div>
+
+      {showChat && selected && ((userInfo.role === 'entrepreneur' && selected.customer) || (userInfo.role === 'customer' && selected.business?.owner)) && (
+        <ChatBox 
+          inquiry={selected} 
+          currentUser={userInfo} 
+          otherUser={userInfo.role === 'customer' ? selected.business.owner : selected.customer} 
+          onClose={() => setShowChat(false)} 
+        />
+      )}
     </div>
   );
 };
