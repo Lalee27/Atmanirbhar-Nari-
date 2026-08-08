@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 const sendVerificationEmail = async (email, name, token) => {
-  const verifyUrl = `${process.env.CLIENT_URL || 'http://localhost:3000'}/verify-email?email=${encodeURIComponent(email)}&token=${token}`;
+  const verifyUrl = `${process.env.CLIENT_URL || 'http://localhost:3001'}/verify-email?email=${encodeURIComponent(email)}&token=${token}`;
   
   const emailHtml = `
     <!DOCTYPE html>

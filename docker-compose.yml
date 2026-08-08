@@ -31,7 +31,7 @@ services:
       MONGO_URI: mongodb://${MONGO_INITDB_ROOT_USERNAME:-admin}:${MONGO_INITDB_ROOT_PASSWORD:-secure_password_123}@mongodb:27017/${MONGO_INITDB_DATABASE:-aatmanirbhar_nari}?authSource=admin
       JWT_SECRET: ${JWT_SECRET:-your_super_secret_key_change_me_in_production}
       NODE_ENV: ${NODE_ENV:-production}
-      CLIENT_URL: ${CLIENT_URL:-http://localhost:3000}
+      CLIENT_URL: ${CLIENT_URL:-http://localhost:3001}
     ports:
       - "5000:5000"
     depends_on:
@@ -46,7 +46,7 @@ services:
     build: ./client
     container_name: aatmanirbhar_nari_client
     ports:
-      - "3000:80"
+      - "3001:80"
     depends_on:
       - backend
     networks:
@@ -67,6 +67,20 @@ services:
       - "8081:8081"
     depends_on:
       - mongodb
+    networks:
+      - aatmanirbhar_network
+
+  # Caddy Reverse Proxy for HTTPS
+  caddy:
+    image: caddy:2-alpine
+    container_name: aatmanirbhar_nari_caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    command: caddy reverse-proxy --from 16.171.11.131.sslip.io --to client:80
+    depends_on:
+      - client
     networks:
       - aatmanirbhar_network
 
