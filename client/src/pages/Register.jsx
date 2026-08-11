@@ -55,7 +55,14 @@ const Register = () => {
       localStorage.setItem('userInfo', JSON.stringify(data));
       redirectUser(data.role);
     } catch (err) {
-      setError(err.response?.data?.message || 'Google registration failed');
+      console.error('GOOGLE SIGNUP ERROR:', err);
+      let detailedError = err.response?.data?.message || err.message || 'Unknown error';
+      
+      if (err.message === 'Network Error') {
+        detailedError = 'Connection blocked. Please disable your Ad-Blocker (like uBlock or Brave Shields) for this site and try again.';
+      }
+      
+      setError(`Google registration failed: ${detailedError}`);
     }
   };
 
