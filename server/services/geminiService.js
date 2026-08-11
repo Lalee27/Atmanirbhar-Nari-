@@ -13,7 +13,7 @@ const generateMentorAdviceText = async (category, topic, question) => {
   const genAI = getGenAI();
   if (genAI) {
     try {
-      const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash' });
+      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
       const prompt = `
 You are an expert business mentor and advisor for the Aatmanirbhar Nari application, empowering women entrepreneurs in India.
 Your goal is to provide highly accurate, efficient, and exceptionally practical advice for a business in the category "${category}".
@@ -47,7 +47,7 @@ const generateGeneralBusinessAdviceText = async (chatHistory, userMessage) => {
   const genAI = getGenAI();
   if (genAI) {
     try {
-      const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash' });
+      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
       
       // Build conversation context
       const formattedHistory = chatHistory
